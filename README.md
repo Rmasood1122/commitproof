@@ -1,3 +1,10 @@
+Works in Claude Code. To install, run these two commands in a Claude Code session:
+
+```
+/plugin marketplace add Rmasood1122/commitproof
+/plugin install commitproof@commitproof
+```
+
 # CommitProof
 
 [![CI](https://github.com/Rmasood1122/commitproof/actions/workflows/ci.yml/badge.svg)](https://github.com/Rmasood1122/commitproof/actions/workflows/ci.yml)
