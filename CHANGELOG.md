@@ -26,6 +26,9 @@ machines the hooks could not run at all.
   autocrlf clone cannot break the launcher.
 - **Fixed: GitHub-style `Co-authored-by: Claude` counted as human.** Trailer
   keys are case-insensitive now, with one rule shared by receipts and history.
+- **New: the Linux kernel's `Assisted-by: Claude:MODEL` trailer counts** as
+  AI-assisted and is recorded in `attribution.assisted_by`. A scan found
+  1,723 kernel commits in a year that named Claude this way, all counted as 0.
 - **Fixed: Windows output encoding.** A piped stdout was cp1252, so dashes
   reached Claude Code as invalid UTF-8 and a non-Latin author name crashed
   `report`; `report --out` is now written as UTF-8. `--out` and `--badge`
