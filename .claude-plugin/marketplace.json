@@ -1,5 +1,5 @@
 {
-  "name": "ai-audit-trail",
+  "name": "commitproof",
   "description": "An audit trail for AI-written code: see how much of a repo Claude helped write in seconds, then give every commit a tamper-evident receipt and a one-command change-control report.",
   "owner": {
     "name": "Rehan Masood",
@@ -7,7 +7,7 @@
   },
   "plugins": [
     {
-      "name": "ai-audit-trail",
+      "name": "commitproof",
       "source": "./",
       "description": "Know which commits AI wrote, and prove the record wasn't rewritten. Start with /ai-history (no setup), then /receipt-init for signed, hash-chained receipts verified offline."
     }

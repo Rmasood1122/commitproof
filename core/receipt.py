@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ai-audit-trail — change-attestation receipts for AI-assisted commits.
+"""commitproof — change-attestation receipts for AI-assisted commits.
 
 Profile: schema_version "change-attestation/v1"
   - Canonicalization: TRS-1 sorted-keys (vendored canonical.py, byte-
@@ -92,7 +92,7 @@ PLUGIN_VERSION = "1.3.0"          # kept equal to .claude-plugin/plugin.json (te
 KEY_PATH = Path(".titan/key")
 TREE = Path(".titan/attestations")
 TOOLS_DIR = Path(".titan/tools")
-HOOK_MARK = "# ai-audit-trail post-commit hook"
+HOOK_MARK = "# commitproof post-commit hook"
 LEGACY_HOOK_MARKS = ("# titan-receipts post-commit hook",)   # v1.0–1.2, still ours
 AI_TRAILER_RE = re.compile(r"claude|anthropic", re.I)
 # Trailer keys are case-insensitive: Claude Code writes Co-Authored-By, GitHub
@@ -584,13 +584,13 @@ def cmd_hook(args: argparse.Namespace) -> int:
 
 
 NOTICE_USER = (
-    "AI Audit Trail: this commit was NOT receipted — receipts aren't set up in "
+    "CommitProof: this commit was NOT receipted — receipts aren't set up in "
     "this repo yet. /ai-history shows how much of this repo Claude already "
     "co-wrote (no setup). Run /receipt-init once to start a tamper-evident audit "
     "trail of every commit (AI-assisted or not). Shown once per repo; silence "
-    "with AI_AUDIT_TRAIL_QUIET=1.")
+    "with COMMITPROOF_QUIET=1.")
 NOTICE_CLAUDE = (
-    "AI Audit Trail is installed but not initialized in this repository, so the "
+    "CommitProof is installed but not initialized in this repository, so the "
     "commit that just succeeded has no receipt. The user has already been shown a "
     "one-time notice naming /receipt-init. Do not run /receipt-init or "
     "`receipt.py init` yourself: it creates a signing key and installs a git hook, "
@@ -611,7 +611,7 @@ def _first_run_notice(root: Path) -> None:
     the plugin's own data dir — never inside the user's repo. If the record
     can't be written, say nothing: an unrecordable notice would repeat on every
     commit, and nagging is worse than silence. Never raises."""
-    if os.environ.get("AI_AUDIT_TRAIL_QUIET") or os.environ.get("TITAN_RECEIPTS_QUIET"):
+    if os.environ.get("COMMITPROOF_QUIET") or os.environ.get("TITAN_RECEIPTS_QUIET"):
         return
     try:
         key = hashlib.sha256(str(Path(root).resolve()).encode()).hexdigest()[:32]
@@ -793,7 +793,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     L.append(f"# AI-assisted change receipts — {Path.cwd().name}")
     L.append("")
     L.append(f"Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} "
-             f"by ai-audit-trail {PLUGIN_VERSION} from `.titan/attestations/`.")
+             f"by commitproof {PLUGIN_VERSION} from `.titan/attestations/`.")
     L.append("")
     L.append("## Verification")
     L.append("")
@@ -872,7 +872,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 
 # ----------------------------------------------------------------- badge
-HOMEPAGE = "https://github.com/Rmasood1122/ai-audit-trail"   # = plugin.json homepage (tested)
+HOMEPAGE = "https://github.com/Rmasood1122/commitproof"   # = plugin.json homepage (tested)
 BADGE_BLUE, BADGE_GREY, BADGE_RED = "#007ec6", "#6c757d", "#e05d44"
 
 

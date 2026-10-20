@@ -1,8 +1,8 @@
-"""v1.3: one name everywhere — ai-audit-trail.
+"""v1.3: one name everywhere — commitproof.
 
 "Titan Gate plugin" searched as an audio noise gate, and "receipts" in the
 directory is Anthropic's own plugin; the repo, plugin and marketplace had
-three different names. The public name is now ai-audit-trail. Data paths
+three different names. The public name is now commitproof. Data paths
 (.titan/, TITAN_KEY) are unchanged so existing chains keep verifying, and
 anything an older version installed is still recognized as ours."""
 import json
@@ -17,15 +17,15 @@ from _shell import shell_argv
 
 ROOT = Path(__file__).resolve().parents[1]
 RECEIPT = ROOT / "core" / "receipt.py"
-NAME = "ai-audit-trail"
-REPO_URL = "https://github.com/Rmasood1122/ai-audit-trail"
+NAME = "commitproof"
+REPO_URL = "https://github.com/Rmasood1122/commitproof"
 LEGACY_MARK = "# titan-receipts post-commit hook"
 
 
 def test_one_name_for_plugin_and_marketplace():
     m = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
     mp = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
-    assert m["name"] == NAME and m["displayName"] == "AI Audit Trail"
+    assert m["name"] == NAME and m["displayName"] == "CommitProof: AI Audit Trail"
     assert mp["name"] == NAME and mp["plugins"][0]["name"] == NAME
 
 
@@ -69,7 +69,7 @@ def run(cwd, *args, env=None):
 def test_new_hook_carries_the_new_mark(repo):
     assert run(repo, "init").returncode == 0
     text = (repo / ".git/hooks/post-commit").read_text()
-    assert "# ai-audit-trail post-commit hook" in text and LEGACY_MARK not in text
+    assert "# commitproof post-commit hook" in text and LEGACY_MARK not in text
 
 
 def test_legacy_block_appended_to_a_foreign_hook_is_still_ours(repo):
@@ -81,29 +81,29 @@ def test_legacy_block_appended_to_a_foreign_hook_is_still_ours(repo):
     r = run(repo, "install-hook")
     assert r.returncode == 0, r.stdout + r.stderr
     assert "already installed" in r.stdout
-    assert "# ai-audit-trail post-commit hook" not in hook.read_text()
+    assert "# commitproof post-commit hook" not in hook.read_text()
 
 
 def test_report_and_notice_use_the_new_name(repo, tmp_path):
     env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "AI_AUDIT_TRAIL_"))}
+           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
     env.update(CLAUDECODE="1", CLAUDE_PLUGIN_DATA=str(tmp_path / "data"))
     payload = {"tool_name": "Bash", "tool_input": {"command": "git commit -m x"},
                "tool_response": {"stdout": "[main 1a2b3c4] x"}}
     r = subprocess.run([sys.executable, str(RECEIPT), "hook"], cwd=repo, input=json.dumps(payload),
                        capture_output=True, text=True, encoding="utf-8", env=env)
-    assert json.loads(r.stdout)["systemMessage"].startswith("AI Audit Trail:")
+    assert json.loads(r.stdout)["systemMessage"].startswith("CommitProof:")
     assert run(repo, "init", "--no-git-hook").returncode == 0
     (repo / "b.py").write_text("y = 2\n")
     sh("git add -A && git commit -qm second", repo)
     assert run(repo, "create").returncode == 0
-    assert "by ai-audit-trail " in run(repo, "report").stdout
+    assert "by commitproof " in run(repo, "report").stdout
 
 
-@pytest.mark.parametrize("var", ["AI_AUDIT_TRAIL_QUIET", "TITAN_RECEIPTS_QUIET"])
+@pytest.mark.parametrize("var", ["COMMITPROOF_QUIET", "TITAN_RECEIPTS_QUIET"])
 def test_quiet_env_new_and_legacy_names(repo, tmp_path, var):
     env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "AI_AUDIT_TRAIL_"))}
+           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
     env.update(CLAUDECODE="1", CLAUDE_PLUGIN_DATA=str(tmp_path / "data"), **{var: "1"})
     payload = {"tool_name": "Bash", "tool_input": {"command": "git commit -m x"},
                "tool_response": {"stdout": "[main 1a2b3c4] x"}}
@@ -123,9 +123,9 @@ def test_readme_install_and_action_pin_match_this_release():
     """README drifted before (a stale version and test count). Pin what can be pinned."""
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     version = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())["version"]
-    assert "/plugin marketplace add Rmasood1122/ai-audit-trail" in readme
-    assert "/plugin install ai-audit-trail@ai-audit-trail" in readme
-    assert f"uses: Rmasood1122/ai-audit-trail@v{version}" in readme
+    assert "/plugin marketplace add Rmasood1122/commitproof" in readme
+    assert "/plugin install commitproof@commitproof" in readme
+    assert f"uses: Rmasood1122/commitproof@v{version}" in readme
 
 
 def test_readme_links_to_files_that_exist():

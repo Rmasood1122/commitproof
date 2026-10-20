@@ -41,7 +41,7 @@ def fakebin(tmp_path):
 
 def env_path(*dirs, keep_system=True):
     env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "AI_AUDIT_TRAIL_"))}
+           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
     parts = [str(d) for d in dirs]
     if keep_system:
         parts.append(os.environ.get("PATH", ""))

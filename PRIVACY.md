@@ -1,6 +1,6 @@
 # Privacy
 
-ai-audit-trail collects nothing.
+commitproof collects nothing.
 
 - All commands run local Python (stdlib only) inside your own repository.
 - No network calls, no telemetry, no accounts. Nothing leaves your machine.
@@ -9,4 +9,4 @@ ai-audit-trail collects nothing.
 - The signing key is generated locally and gitignored; this plugin never
   transmits it anywhere.
 
-Questions: https://github.com/Rmasood1122/ai-audit-trail/issues
+Questions: https://github.com/Rmasood1122/commitproof/issues

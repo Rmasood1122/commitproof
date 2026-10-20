@@ -1,8 +1,9 @@
-# AI Audit Trail
+# CommitProof
 
-[![CI](https://github.com/Rmasood1122/ai-audit-trail/actions/workflows/ci.yml/badge.svg)](https://github.com/Rmasood1122/ai-audit-trail/actions/workflows/ci.yml)
+[![CI](https://github.com/Rmasood1122/commitproof/actions/workflows/ci.yml/badge.svg)](https://github.com/Rmasood1122/commitproof/actions/workflows/ci.yml)
 
-**Know which commits AI wrote, and prove the record wasn't rewritten.**
+**An AI audit trail for your commits.** Know which commits AI wrote, and
+prove the record wasn't rewritten.
 
 Teams using Claude Code get asked two questions:
 
@@ -16,8 +17,8 @@ Teams using Claude Code get asked two questions:
 ## Try it in 30 seconds
 
 ```
-/plugin marketplace add Rmasood1122/ai-audit-trail
-/plugin install ai-audit-trail@ai-audit-trail
+/plugin marketplace add Rmasood1122/commitproof
+/plugin install commitproof@commitproof
 ```
 
 Then, in any repository:
@@ -113,7 +114,7 @@ was altered, and **unsigned** when it comes from `/ai-history`.
 | from your own terminal | git `post-commit` hook (defers inside Claude Code) | from `Co-Authored-By`/`Claude-Session` trailers; otherwise `false` | author, timestamp |
 
 Neither hook can break a commit: an uninitialized repo is a silent no-op
-(plus a one-time notice naming `/receipt-init`; `AI_AUDIT_TRAIL_QUIET=1`
+(plus a one-time notice naming `/receipt-init`; `COMMITPROOF_QUIET=1`
 turns it off), and the git hook always exits 0. Commit `.titan/attestations/`
 and `.titan/tools/`, never `.titan/key`. Git hooks aren't cloned, so each
 teammate runs `python3 .titan/tools/receipt.py install-hook` once per clone
@@ -122,7 +123,7 @@ teammate runs `python3 .titan/tools/receipt.py install-hook` once per clone
 ## How it fits with git-ai
 
 [git-ai](https://github.com/git-ai-project/git-ai) does line-level AI blame
-across many coding agents. Use it for that. AI Audit Trail answers the
+across many coding agents. Use it for that. CommitProof answers the
 question an auditor asks next: can you prove this record wasn't edited after
 the fact? It does that with hash-chained, signed receipts you verify offline,
 and a report built as change-control evidence. The two work side by side.
@@ -130,7 +131,7 @@ and a report built as change-control evidence. The two work side by side.
 ## Verify in CI
 
 ```yaml
-- uses: Rmasood1122/ai-audit-trail@v1.3.0
+- uses: Rmasood1122/commitproof@v1.3.0
   with:
     key: ${{ secrets.TITAN_KEY }}       # omit for structure-only verification
     report: docs/ai-change-receipts.md  # optional
@@ -209,8 +210,8 @@ Same tool, new name (1.3.0). To switch an existing install:
 ```
 /plugin uninstall titan-receipts@titan-receipts-marketplace
 /plugin marketplace remove titan-receipts-marketplace
-/plugin marketplace add Rmasood1122/ai-audit-trail
-/plugin install ai-audit-trail@ai-audit-trail
+/plugin marketplace add Rmasood1122/commitproof
+/plugin install commitproof@commitproof
 ```
 
 Existing `.titan/` chains keep verifying unchanged. Re-run

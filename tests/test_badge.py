@@ -18,7 +18,7 @@ from _shell import shell_argv
 
 PLUGIN = Path(__file__).resolve().parents[1]
 RECEIPT = PLUGIN / "core" / "receipt.py"
-REPO_URL = "https://github.com/Rmasood1122/ai-audit-trail"
+REPO_URL = "https://github.com/Rmasood1122/commitproof"
 CLAUDE = "Co-Authored-By: Claude <noreply@anthropic.com>"
 
 

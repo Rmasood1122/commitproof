@@ -13,5 +13,5 @@ for py in python3 python py; do
     exec "$py" "$@"
   fi
 done
-echo "ai-audit-trail: needs Python 3.10+ on PATH as python3, python or py — none found" >&2
+echo "commitproof: needs Python 3.10+ on PATH as python3, python or py — none found" >&2
 exit 127

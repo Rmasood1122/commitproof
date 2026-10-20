@@ -2,7 +2,7 @@
 
 # AI-assisted change receipts — payments-api
 
-Generated 2026-10-20 14:19 UTC by ai-audit-trail 1.3.0 from `.titan/attestations/`.
+Generated 2026-10-20 14:19 UTC by commitproof 1.3.0 from `.titan/attestations/`.
 
 ## Verification
 

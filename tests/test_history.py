@@ -24,7 +24,7 @@ CLAUDE = "Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 def clean_env(**extra):
     env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "AI_AUDIT_TRAIL_"))}
+           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
     env.update(extra)
     return env
 

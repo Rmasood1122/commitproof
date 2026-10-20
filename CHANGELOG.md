@@ -2,7 +2,7 @@
 
 ## 1.3.0 — 2026-10-20
 
-Renamed **Titan Receipts → AI Audit Trail** (`ai-audit-trail`), with an answer
+Renamed **Titan Receipts → CommitProof** (`commitproof`), with an answer
 in the first minute. Installs were loading the plugin and producing nothing:
 the only useful output came after `/receipt-init`, and on some Windows
 machines the hooks could not run at all.
@@ -30,8 +30,8 @@ machines the hooks could not run at all.
   reached Claude Code as invalid UTF-8 and a non-Latin author name crashed
   `report`; `report --out` is now written as UTF-8. `--out` and `--badge`
   create missing folders.
-- **Renamed** plugin, marketplace, action and messages to `ai-audit-trail`;
-  the repo moves to `Rmasood1122/ai-audit-trail` (GitHub redirects the old
+- **Renamed** plugin, marketplace, action and messages to `commitproof`;
+  the repo moves to `Rmasood1122/commitproof` (GitHub redirects the old
   URL). `.titan/` data paths are unchanged, so existing chains keep
   verifying; the old git-hook mark and `TITAN_RECEIPTS_QUIET` are still
   honoured. Switching an install: see the README's "Formerly Titan Receipts".

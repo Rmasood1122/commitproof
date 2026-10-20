@@ -24,7 +24,7 @@ COMMIT_OK = {"tool_name": "Bash",
 
 def env_with(data_dir, **extra):
     env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "AI_AUDIT_TRAIL_"))}
+           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
     env.update(CLAUDECODE="1", CLAUDE_PLUGIN_DATA=str(data_dir))
     env.update(extra)
     return env

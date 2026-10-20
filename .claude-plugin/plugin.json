@@ -1,6 +1,6 @@
 {
-  "name": "ai-audit-trail",
-  "displayName": "AI Audit Trail",
+  "name": "commitproof",
+  "displayName": "CommitProof: AI Audit Trail",
   "version": "1.3.0",
   "description": "An audit trail for AI-written code. /ai-history answers 'how much of this repo did Claude help write?' in seconds from git history, no setup. /receipt-init then gives every commit a tamper-evident receipt (AI-assisted or not, model, Claude Code version, file hashes): hash-chained, signed, verified offline. /receipt-report turns the chain into change-control evidence for SOC 2, HIPAA or PCI audits.",
   "author": {
@@ -8,8 +8,8 @@
     "email": "rmasood524@gmail.com",
     "url": "https://github.com/Rmasood1122"
   },
-  "homepage": "https://github.com/Rmasood1122/ai-audit-trail",
-  "repository": "https://github.com/Rmasood1122/ai-audit-trail",
+  "homepage": "https://github.com/Rmasood1122/commitproof",
+  "repository": "https://github.com/Rmasood1122/commitproof",
   "license": "MIT",
   "keywords": [
     "audit-trail",
@@ -26,7 +26,7 @@
     "git"
   ],
   "icon": "./.claude-plugin/icon.svg",
-  "supportUrl": "https://github.com/Rmasood1122/ai-audit-trail/issues",
-  "documentationUrl": "https://github.com/Rmasood1122/ai-audit-trail#readme",
-  "privacyPolicyUrl": "https://github.com/Rmasood1122/ai-audit-trail/blob/main/PRIVACY.md"
+  "supportUrl": "https://github.com/Rmasood1122/commitproof/issues",
+  "documentationUrl": "https://github.com/Rmasood1122/commitproof#readme",
+  "privacyPolicyUrl": "https://github.com/Rmasood1122/commitproof/blob/main/PRIVACY.md"
 }
