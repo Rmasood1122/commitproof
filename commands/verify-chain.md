@@ -31,7 +31,10 @@ Report the result exactly as it is:
   SSH SIG FAIL can also mean the signer's key isn't in `allowed_signers` (a
   teammate who never ran `/receipt-init --ssh`); check that before calling it
   tampering, and never add a key just to make it pass without the user
-  confirming it's that person's key.
+  confirming it's that person's key. A SIG FAIL saying **signature
+  downgrade** is an HMAC receipt after the chain moved to SSH: treat it as a
+  finding (someone wrote a receipt without a registered key), not a setup
+  glitch.
 - **SIGNATURES NOT CHECKED (exit 2)** means some HMAC receipts and no
   `.titan/key` here (typically a fresh clone), or SSH receipts with no
   `ssh-keygen` / `allowed_signers`. Everything else still ran and its result

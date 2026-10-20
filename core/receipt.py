@@ -241,8 +241,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     if root is None:
         return die("not inside a git repository")
     os.chdir(root)
-    use_ssh = getattr(args, "ssh", None) is not None or (
-        ALLOWED_SIGNERS.exists() and not getattr(args, "hmac", False))
+    use_ssh = getattr(args, "ssh", None) is not None or ALLOWED_SIGNERS.exists()
     if use_ssh:
         return _init_ssh(args, Path(root))
     if KEY_PATH.exists() and not args.force:
@@ -567,6 +566,16 @@ def cmd_create(args: argparse.Namespace) -> int:
             return 0  # hook mode: repo not initialized — silently do nothing
         return die("no signing set up in this clone — run receipt.py init first (or init --ssh)")
     key = None
+    if signer[0] == "hmac" and ALLOWED_SIGNERS.exists():
+        # verify treats HMAC after the move to SSH as a downgrade; don't write one
+        try:
+            head = git("rev-parse", "HEAD").strip()
+        except RuntimeError:
+            head = "(none yet)"
+        return _signing_failed(args, head,
+                               f"this repo signs receipts with SSH ({ALLOWED_SIGNERS.as_posix()}) "
+                               f"and this clone has only the old HMAC key; run "
+                               f"/receipt-init --ssh here")
     if signer[0] == "hmac":
         key = load_key()
         if key is None:
@@ -823,6 +832,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
     if s["ssh_unchecked"]:
         print(f"SSH SIGNATURES NOT CHECKED: {len(s['ssh_unchecked'])} receipt(s) — "
               f"{s['ssh_unchecked'][0][3]}", file=sys.stderr)
+    pinned = bool(getattr(args, "allowed_signers", None))
+    if s["hmac_unchecked"] and public_only and pinned:
+        # a pinned signer list is a policy: every receipt must be checkable
+        print(f"NOT CHECKED: {len(s['hmac_unchecked'])} HMAC signature(s), and with a pinned "
+              f"--allowed-signers a receipt that can't be checked fails. Provide the HMAC "
+              f"key, or verify without pinning.", file=sys.stderr)
+        _report_anchor()
+        return 2
     if s["hmac_unchecked"] and public_only:
         print(f"NOT CHECKED: {len(s['hmac_unchecked'])} HMAC signature(s) — they need the "
               f"shared {KEY_PATH.as_posix()}, which --public-only doesn't use")
@@ -865,7 +882,34 @@ def check_signatures(rows: list[tuple[Path, dict]], allowed: Path,
     hmac_key = load_key() if use_hmac and KEY_PATH.exists() else None
     needs_ssh = any(r.get("signing_version") == signing.SSH_V1 for _, r in rows)
     with signing.SshVerifier(allowed if needs_ssh else None) as ssh:
-        return [(p, r, *signing.check(r, hmac_key, ssh)) for p, r in rows]
+        out = [(p, r, *signing.check(r, hmac_key, ssh)) for p, r in rows]
+    # No downgrade: once the chain moved to SSH, a later HMAC receipt is how
+    # someone without a registered key would slip past --public-only (HMAC is
+    # skipped there). Order comes from the chain's own prev links, which a
+    # forger can't reorder without breaking later SSH signatures.
+    seen_ssh = False
+    rank = {id(r): i for i, r in enumerate(chain_order([r for _, r in rows]))}
+    for i in sorted(range(len(out)), key=lambda i: rank.get(id(out[i][1]), len(out))):
+        p, r, st, detail = out[i]
+        if r.get("signing_version") == signing.SSH_V1:
+            seen_ssh = True
+        elif seen_ssh:
+            out[i] = (p, r, "invalid", "HMAC receipt after the chain moved to SSH: "
+                                       "signature downgrade")
+    return out
+
+
+def chain_order(rs: list[dict]) -> list[dict]:
+    """Receipts from GENESIS forward by their prev links. A broken chain (it
+    already fails structure) yields what is reachable, then the rest."""
+    by_prev = {r.get("prev_receipt_hash"): r for r in rs}
+    ordered, cur, seen = [], GENESIS, set()
+    while cur in by_prev and cur not in seen:
+        seen.add(cur)
+        nxt = by_prev[cur]
+        ordered.append(nxt)
+        cur = nxt.get("receipt_hash")
+    return ordered + [r for r in rs if all(r is not o for o in ordered)]
 
 
 def summarize(rows: list[tuple[Path, dict, str, str]]) -> dict:
@@ -1306,8 +1350,6 @@ def main() -> int:
     p.add_argument("--ssh", nargs="?", const="", default=None, metavar="KEY",
                    help="sign with your SSH key (default: git's SSH signing key, "
                         "else ~/.ssh/id_ed25519) and register it in .titan/allowed_signers")
-    p.add_argument("--hmac", action="store_true",
-                   help="use a shared HMAC key even in a repo that already uses SSH")
     p.add_argument("--no-git-hook", action="store_true",
                    help="do not vendor tools / install the git post-commit hook")
     p.set_defaults(fn=cmd_init)

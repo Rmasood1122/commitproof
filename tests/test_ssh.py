@@ -252,3 +252,70 @@ def test_ci_action_pinned_signers_override_the_repo(alice_repo, keys):
     bob_only = "bob@example.com " + Path(str(keys["bob"]) + ".pub").read_text().strip()
     r = run_action(alice_repo, allowed_signers=bob_only)
     assert r.returncode == 1 and "SIG FAIL" in r.stderr
+
+
+# ------------------------------------------------- signature downgrade
+def _forge_hmac_receipt(repo: Path, signature: str = "0" * 64) -> Path:
+    """What someone with push access but no registered SSH key could write:
+    a correctly chained receipt that claims the weaker HMAC scheme."""
+    sys.path.insert(0, str(PLUGIN / "core"))
+    import hashlib
+    from canonical import canonical_bytes
+    last = json.loads(receipts(repo)[-1].read_text())
+    forged = {k: v for k, v in last.items() if k not in ("signer", "signature", "receipt_hash")}
+    forged.update(signing_version="hmac-sha256-v1", receipt_id="f0f0f0f0-forged",
+                  prev_receipt_hash=last["receipt_hash"])
+    forged["commit"] = dict(last["commit"], sha="f" * 40, subject="forged")
+    forged["receipt_hash"] = hashlib.sha256(canonical_bytes(forged)).hexdigest()
+    forged["signature"] = signature
+    p = receipts(repo)[-1].parent / "forged.json"
+    p.write_text(json.dumps(forged, indent=2) + "\n")
+    return p
+
+
+def test_hmac_receipt_after_the_move_to_ssh_is_a_downgrade(alice_repo):
+    _forge_hmac_receipt(alice_repo)
+    for args in (["verify", "--public-only"], ["verify"]):
+        v = run(alice_repo, *args)
+        assert v.returncode == 1, (args, v.stdout + v.stderr)
+        assert "SIG FAIL" in v.stderr and "downgrade" in v.stderr
+
+
+def test_downgrade_fails_even_with_a_valid_hmac_signature(alice_repo):
+    """A key holder can't slip HMAC receipts back in after SSH either."""
+    sys.path.insert(0, str(PLUGIN / "core"))
+    import signing
+    key = "11" * 32
+    (alice_repo / ".titan" / "key").write_text(key + "\n")
+    p = _forge_hmac_receipt(alice_repo)
+    r = json.loads(p.read_text())
+    r["signature"] = signing.hmac_sign(bytes.fromhex(key), r["receipt_hash"].encode())
+    p.write_text(json.dumps(r, indent=2) + "\n")
+    v = run(alice_repo, "verify")
+    assert v.returncode == 1 and "downgrade" in v.stderr
+
+
+def test_hmac_signing_is_refused_in_an_ssh_repo(alice_repo):
+    sh("git config --unset commitproof.signingkey", alice_repo)
+    (alice_repo / ".titan" / "key").write_text("22" * 32 + "\n")
+    commit(alice_repo, "d.py")
+    r = run(alice_repo, "create")
+    assert r.returncode == 1 and "--ssh" in r.stderr
+    assert len(receipts(alice_repo)) == 1
+
+
+def test_pinned_signers_mean_unchecked_hmac_cannot_pass(tmp_path, keys):
+    repo = make_repo(tmp_path / "legacy", "alice@example.com")
+    assert run(repo, "init", "--no-git-hook").returncode == 0           # HMAC era
+    commit(repo, "h.py")
+    assert run(repo, "create").returncode == 0
+    assert run(repo, "init", "--ssh", str(keys["alice"]), "--no-git-hook").returncode == 0
+    commit(repo, "s.py")
+    assert run(repo, "create").returncode == 0
+    (repo / ".titan" / "key").unlink()
+    pinned = tmp_path / "pinned_signers"
+    pinned.write_bytes((repo / ".titan" / "allowed_signers").read_bytes())
+    v = run(repo, "verify", "--public-only")
+    assert v.returncode == 0                       # no policy given: legacy HMAC is reported, not failed
+    v = run(repo, "verify", "--public-only", "--allowed-signers", str(pinned))
+    assert v.returncode == 2 and "pinned" in v.stderr

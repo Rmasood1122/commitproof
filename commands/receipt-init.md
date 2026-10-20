@@ -1,6 +1,6 @@
 ---
 description: Start here — one-time setup that turns on receipts for this repo so every commit (AI-assisted or not) gets a tamper-evident record. --ssh signs with your own SSH key (no shared secret, anyone can verify); default is a gitignored shared HMAC key. Also vendors the verifier and installs a git post-commit hook
-argument-hint: "[--ssh [KEY]] [--hmac] [--no-git-hook] [--force]"
+argument-hint: "[--ssh [KEY]] [--no-git-hook] [--force]"
 ---
 
 Initialize receipts in the user's current repository:
@@ -47,7 +47,10 @@ After it succeeds, explain the three facts the user must not learn later.
 
 If `--ssh` refuses with "SSH key not usable", nothing was written. Relay the
 reason (no key found, or it needs a passphrase): `ssh-add` the key, or pass
-another with `--ssh PATH`. Don't fall back to HMAC unless the user asks.
+another with `--ssh PATH`. A repo that has moved to SSH has no HMAC
+fallback: verify treats an HMAC receipt after the first SSH one as a
+signature downgrade, so commits are refused a receipt until this clone
+runs `/receipt-init --ssh`.
 
 If init refuses because the key is tracked by git, that is fail-closed
 working as designed: help them run `git rm --cached .titan/key`, then retry.

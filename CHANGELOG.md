@@ -29,6 +29,13 @@ forge any receipt, and a clone without the key can't check signatures.
 - **CI action:** SSH signatures are checked with no secret (`verify
   --public-only` when no `key` is given), and a new `allowed_signers` input
   pins who may sign, outside the repo under audit.
+- **No signature downgrade.** Once a chain has an SSH receipt, any later HMAC
+  receipt is invalid, checked or not (order from the chain's own prev links),
+  and HMAC signing is refused in a repo with `allowed_signers`. Otherwise
+  someone with push access but no registered key could append an HMAC-labelled
+  receipt and pass `--public-only`, which skips HMAC. With a pinned
+  `--allowed-signers`, HMAC receipts that can't be checked fail instead of
+  passing. Found by an automated security review before release.
 - **Never silent:** if the Claude Code hook can't sign (key gone, needs a
   passphrase), the user gets a message saying the commit has no receipt and
   how to fix it. No unsigned receipt is ever written.
