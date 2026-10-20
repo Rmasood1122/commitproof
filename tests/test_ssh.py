@@ -227,18 +227,23 @@ def test_init_in_an_ssh_repo_uses_git_signing_key_by_default(alice_repo, keys, t
 def _action_step() -> str:
     import yaml
     a = yaml.safe_load((PLUGIN / "action.yml").read_text(encoding="utf-8"))
-    return a["runs"]["steps"][0]["run"]
+    step = a["runs"]["steps"][0]
+    assert step["shell"] == "bash"      # the run block uses bash-only `set -o pipefail`
+    return step["run"]
 
 
 def run_action(repo: Path, **inputs):
+    # Run it the way GitHub does: with bash. On Ubuntu `sh` is dash, which
+    # rejects pipefail; on Windows use Git's bash, never System32's WSL one.
     from _shell import POSIX_SHELL
-    if POSIX_SHELL is None:
-        pytest.skip("needs a POSIX shell")
+    bash = POSIX_SHELL if sys.platform == "win32" else shutil.which("bash")
+    if bash is None:
+        pytest.skip("needs bash")
     e = env(GITHUB_ACTION_PATH=PLUGIN.as_posix(), TITAN_KEY=inputs.get("key", ""),
             TITAN_REPORT=inputs.get("report", ""), TITAN_ALLOW_REPO_VERIFIER="false",
             TITAN_ALLOWED_SIGNERS=inputs.get("allowed_signers", ""),
             RUNNER_TEMP=str(repo.parent))
-    return subprocess.run([POSIX_SHELL, "-c", _action_step()], cwd=repo, capture_output=True,
+    return subprocess.run([bash, "-c", _action_step()], cwd=repo, capture_output=True,
                           text=True, encoding="utf-8", env=e)
 
 
