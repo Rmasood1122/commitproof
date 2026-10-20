@@ -119,7 +119,7 @@ def test_claude_session_trailer_counts_and_human_coauthor_does_not(repo, msgdir)
 
 
 def test_kernel_style_assisted_by_trailer_counts(repo, msgdir):
-    """The Linux kernel records AI help as `Assisted-by: AGENT:MODEL`; 1,732
+    """The Linux kernel records AI help as `Assisted-by: AGENT:MODEL`; 1,723
     kernel commits named Claude that way and were counted as 0."""
     commit(repo, msgdir, "k.c", 10, "mm: fix\n\nAssisted-by: Claude:claude-opus-4-6\n"
                                     "Signed-off-by: Dev <dev@example.com>\n")

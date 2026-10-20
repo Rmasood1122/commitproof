@@ -100,7 +100,7 @@ AI_TRAILER_RE = re.compile(r"claude|anthropic", re.I)
 # GitHub form as ai_assisted=false.
 CO_AUTHOR_RE = re.compile(r"^Co-Authored-By:\s*(.+)$", re.M | re.I)
 SESSION_RE = re.compile(r"^Claude-Session:\s*(\S+)$", re.M | re.I)
-# The Linux kernel's form: `Assisted-by: AGENT:MODEL` (1,732 kernel commits in
+# The Linux kernel's form: `Assisted-by: AGENT:MODEL` (1,723 kernel commits in
 # a year named Claude this way and were counted as human).
 ASSISTED_RE = re.compile(r"^Assisted-by:\s*(.+)$", re.M | re.I)
 
