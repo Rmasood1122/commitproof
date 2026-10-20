@@ -1,6 +1,6 @@
 ---
 name: receipt-integrity
-description: Operate and explain tamper-evident change receipts honestly — what hash chains and HMAC signatures prove, what they don't, and how to respond to a verification failure without laundering it
+description: Use whenever someone needs to know or prove which commits AI wrote — "which commits did Claude write", "audit trail for AI-generated code", "what share of our code is AI-assisted", "SOC 2 / HIPAA / PCI change-control evidence", "can we prove this history wasn't rewritten", AI provenance or an AI bill of materials — and whenever receipts, /receipt-init, /verify-chain or /receipt-report come up or a verification fails. Covers setup, what hash-chained HMAC receipts prove and don't, and handling a failed check without laundering it.
 ---
 
 # Receipt integrity (and its honest limits)
@@ -8,6 +8,14 @@ description: Operate and explain tamper-evident change receipts honestly — wha
 Use this skill whenever the user works with change receipts, asks what the
 receipts prove, prepares compliance claims involving them, or when a
 verification fails.
+
+## Not set up yet?
+
+If `.titan/key` doesn't exist in the repo, nothing is being receipted. Offer
+`/receipt-init` — the one-time setup — and say what it does (gitignored signing
+key, vendored verifier, git post-commit hook). Don't run it unasked: creating a
+key and installing a hook is the user's decision. Commits made before init stay
+unreceipted; never backfill them as if they had been recorded at the time.
 
 ## What a receipt chain actually proves
 
