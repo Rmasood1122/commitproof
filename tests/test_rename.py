@@ -41,10 +41,23 @@ def test_old_public_name_is_gone_from_user_facing_files():
                                 "skills/receipt-integrity/SKILL.md")]
     files += sorted((ROOT / "commands").glob("*.md"))
     for f in files:
-        text = f.read_text(encoding="utf-8").lower()
+        text = f.read_text(encoding="utf-8")
+        if f.name == "marketplace.json":   # the renames map is the one place the old name must stay
+            data = json.loads(text)
+            data.pop("renames", None)
+            text = json.dumps(data)
+        text = text.lower()
         assert "titan-receipts" not in text and "titan receipts" not in text, f
         assert "titan-gate-plugin" not in text, f
 
+
+def test_old_installs_migrate_through_a_renames_entry():
+    """Installs of titan-receipts@... broke when the plugin became commitproof: after a
+    marketplace update the old name was "not found" and the plugin failed to load. The
+    marketplace's renames map points the old name at this plugin, so they load again."""
+    mp = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
+    assert mp.get("renames") == {"titan-receipts": NAME}
+    assert NAME in [p["name"] for p in mp["plugins"]]   # the chain must end at a listed plugin
 
 def sh(cmd, cwd):
     r = subprocess.run(shell_argv(cmd), cwd=cwd, capture_output=True, text=True)
