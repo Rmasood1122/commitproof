@@ -53,18 +53,11 @@ what receipts close.
 Open Claude Code **inside the repository you want receipts for**:
 
 ```
-/receipt-init --ssh              # one-time: sign with your SSH key, vendor the verifier, install a git post-commit hook
+/receipt-init                    # one-time: signing key (gitignored), vendored verifier, git post-commit hook
 git commit -m "…"                # every commit from now on is receipted, human or AI
 /verify-chain                    # walks the chain offline; exit 0 means intact
 /receipt-report --badge docs/ai-audit-badge.svg
 ```
-
-**Sign with your own SSH key (recommended).** `--ssh` uses git's SSH signing
-key if you have one, else `~/.ssh/id_ed25519`, and adds your public key to
-`.titan/allowed_signers`. Each receipt then names who signed it, and anyone
-can verify with no secret: a fresh clone, a reviewer, CI. Teammates run
-`/receipt-init --ssh` in their own clones. Without `--ssh`, init creates a
-shared HMAC key (`.titan/key`, gitignored) that every verifier needs.
 
 `/receipt-report` writes the evidence document: verification result first,
 then AI-assisted share by author, month and recorder, and the models and
@@ -82,10 +75,8 @@ Each receipt is one small JSON file in `.titan/attestations/`:
                   "models": ["claude-opus-5-5"], "claude_code_version": "2.1.299",
                   "session_id": "7f3a…", "transcript": { "lines": 412, "content_sha256": "2ef9732e…" } },
   "prev_receipt_hash": "b9f069af…",
-  "signing_version": "ssh-sig-v1",
-  "signer": { "principal": "dev@example.com", "key": "SHA256:9+gzyPF4a6eV…" },
   "receipt_hash": "c41d0e7b…",
-  "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lH…"
+  "signature": "80265ea9…"
 }
 ```
 
@@ -110,9 +101,9 @@ was altered, and **unsigned** when it comes from `/ai-history`.
 | Command | What it does |
 |---|---|
 | `/ai-history` | Share of commits and lines added with a Claude trailer, by author and month, from git history. No setup, writes nothing, unsigned. `--since`, `--json`, `--badge`. |
-| `/receipt-init` | `--ssh [KEY]`: registers your SSH key in `.titan/allowed_signers` and signs with it (no secret). Default: generates a shared HMAC key (gitignored; init refuses if git tracks it). Either way it vendors the verifier into `.titan/tools/` and installs a git `post-commit` hook. `--no-git-hook` to skip the hook. |
+| `/receipt-init` | Generates the signing key (gitignored; init refuses if git tracks it), vendors the verifier into `.titan/tools/`, installs a git `post-commit` hook. `--no-git-hook` to skip the hook. |
 | `/receipt` | Writes a signed, chained receipt for HEAD by hand. One per commit; re-runs are no-ops. |
-| `/verify-chain` | Walks the whole chain offline: structure and every signature, naming who signed each SSH receipt. Any tamper exits 1 and names the receipt. `--public-only` checks everything that needs no secret (structure + SSH) and says HMAC signatures were skipped; `--structure-only` skips signatures; `--allowed-signers FILE` trusts that list instead of the repo's. Ends with an `ANCHOR` line: how many receipts are committed **and pushed**. |
+| `/verify-chain` | Walks the whole chain offline: structure and every signature. Any tamper exits 1 and names the receipt. `--structure-only` checks without the key and says signatures were not checked. Ends with an `ANCHOR` line: how many receipts are committed **and pushed**. |
 | `/receipt-report` | Markdown evidence: verification result, AI-assisted share by recorder / author / month, models and Claude Code versions recorded, and the limits footer. `--out`, `--badge`. |
 
 ## Two hooks, full coverage
@@ -125,7 +116,7 @@ was altered, and **unsigned** when it comes from `/ai-history`.
 Neither hook can break a commit: an uninitialized repo is a silent no-op
 (plus a one-time notice naming `/receipt-init`; `COMMITPROOF_QUIET=1`
 turns it off), and the git hook always exits 0. Commit `.titan/attestations/`
-and `.titan/tools/` (and `.titan/allowed_signers`), never `.titan/key`. Git hooks aren't cloned, so each
+and `.titan/tools/`, never `.titan/key`. Git hooks aren't cloned, so each
 teammate runs `python3 .titan/tools/receipt.py install-hook` once per clone
 (`python` or `py` on Windows).
 
@@ -140,18 +131,15 @@ and a report built as change-control evidence. The two work side by side.
 ## Verify in CI
 
 ```yaml
-- uses: Rmasood1122/commitproof@v1.4.0
+- uses: Rmasood1122/commitproof@v1.3.1
   with:
-    report: docs/ai-change-receipts.md                # optional
-    allowed_signers: ${{ vars.COMMITPROOF_SIGNERS }}  # optional: who may sign, pinned outside the repo
-    key: ${{ secrets.TITAN_KEY }}                     # only for HMAC-signed receipts
+    key: ${{ secrets.TITAN_KEY }}       # omit for structure-only verification
+    report: docs/ai-change-receipts.md  # optional
 ```
 
-SSH-signed receipts are verified with no secret. Without `key`, HMAC-signed
-receipts are reported as not checked, never as passed; with it, the key is
-written only for the step and removed after. Set `allowed_signers` to a list
-you control (a repository or organization variable) so the repo under audit
-doesn't get to decide who may sign. The action verifies with **its own pinned
+Without the key the action verifies chain structure and content hashes and
+says plainly that signatures were not checked. The key is written only for
+the step and removed after. The action verifies with **its own pinned
 verifier**, never the `.titan/tools/receipt.py` in the repo under audit: the
 party who could alter the receipts also controls that copy. Pin a ref you
 trust. `allow_repo_verifier: true` runs the repo's copy for the rare
@@ -161,19 +149,14 @@ compatibility case and warns that the result is self-reported.
 
 **Proves:** the recorded content (file hashes, diff hash, author, provenance
 claims) is unchanged since signing, and the receipts form one unbroken ordered
-chain. With SSH signing it also proves **which key signed each receipt**: the
-one `.titan/allowed_signers` lists for the named signer, checkable by anyone.
+chain, under a key your team controls.
 
 <details>
 <summary><strong>Does not prove</strong>: read before writing a compliance claim</summary>
 
-- **Who held the key, for HMAC receipts.** HMAC is a shared secret; anyone
-  with `.titan/key` can produce valid signatures. Use `--ssh` to close this.
-- **Who controls an SSH key.** An SSH receipt identifies the key, and the
-  person only as far as key custody goes. The key-to-person mapping is only as
-  trustworthy as `allowed_signers`' git history (adding a key is a visible
-  commit), or pin the list in CI. External timestamping lives in the upstream
-  [titan-gate](https://github.com/Rmasood1122/titan-gate) engine.
+- **Who held the key.** HMAC is a shared secret; anyone with `.titan/key` can
+  produce valid signatures. Asymmetric signing and external timestamping live
+  in the upstream [titan-gate](https://github.com/Rmasood1122/titan-gate) engine.
 - **That anyone reviewed the change**, or that it was good.
 - **That provenance is true.** `ai_assisted`, model, version, session and
   transcript hash are recorded claims: trailers from the commit message and
@@ -205,26 +188,17 @@ lines, because a receipt system that overclaims is worse than none.
   transcript named in the hook payload to record model names, the Claude
   Code version, its line count and sha256. Transcript content is never copied
   into the receipt. Writes one JSON file under `.titan/attestations/`.
-- **`/receipt-init`:** creates `.titan/key` and adds it to `.gitignore`
-  (or, with `--ssh`, adds your SSH public key and git email to
-  `.titan/allowed_signers` and records the key's path in this clone's local
-  git config as `commitproof.signingkey`), copies `receipt.py`,
-  `badge.py`, `canonical.py`, `chain_state.py` and `signing.py` into
-  `.titan/tools/`, and
-  installs or appends to `.git/hooks/post-commit`. Nothing else in your repo
-  changes.
-- **SSH signing:** runs your local `ssh-keygen` (`-Y sign` for each receipt,
-  `-Y verify` when checking). Your private key is only ever passed to
-  `ssh-keygen` by path, and never read, copied or sent anywhere.
+- **`/receipt-init`:** creates `.titan/key` and adds it to `.gitignore`,
+  copies `receipt.py`, `badge.py`, `canonical.py` and `chain_state.py` into
+  `.titan/tools/`, and installs or appends to `.git/hooks/post-commit`.
+  Nothing else in your repo changes.
 - **`/ai-history`, `/verify-chain`, `/receipt-report`:** read-only, apart
   from the `--out` or `--badge` file you name.
 - **Network:** none. No telemetry, no package installs, no service.
 
 ## Requirements and privacy
 
-Claude Code, git, and Python 3.10+ on PATH as `python3`, `python` or `py`;
-for SSH signing, OpenSSH 8.2+ `ssh-keygen` (ships with Git for Windows,
-macOS and Linux).
+Claude Code, git, and Python 3.10+ on PATH as `python3`, `python` or `py`.
 Stdlib only: no packages, no network, no service, nothing phones home
 ([PRIVACY.md](PRIVACY.md)). CI runs the full suite, every tamper path
 included, on Ubuntu and Windows.

@@ -1,24 +1,15 @@
 name: "CommitProof — verify receipt chain"
-description: "Verify a repository's .titan/attestations/ receipt chain offline with THIS action's pinned verifier (not the repo's). SSH-signed receipts are checked with no secret; HMAC receipts need the key secret, and without it the action says they were not checked."
+description: "Verify a repository's .titan/attestations/ receipt chain offline with THIS action's pinned verifier (not the repo's). Without a key: chain structure + content hashes (and says signatures were not checked). With the key secret: full signature verification."
 branding:
   icon: shield
   color: gray-dark
 inputs:
   key:
-    description: "Hex HMAC key (pass a secret). Only HMAC-signed receipts need it; omit it and SSH signatures are still checked."
+    description: "Hex signing key (pass a secret). Omit for structure-only verification."
     required: false
     default: ""
   report:
     description: "Path to write the markdown compliance report to (optional)."
-    required: false
-    default: ""
-  allowed_signers:
-    description: >-
-      Trusted allowed_signers content (a secret or variable you control). When
-      set, SSH signatures are checked against these keys instead of the audited
-      repo's .titan/allowed_signers: the repo under audit should not decide who
-      may sign. Omit it to trust the repo's file (changes to it are visible in
-      git history).
     required: false
     default: ""
   allow_repo_verifier:
@@ -42,7 +33,6 @@ runs:
         TITAN_KEY: ${{ inputs.key }}
         TITAN_REPORT: ${{ inputs.report }}
         TITAN_ALLOW_REPO_VERIFIER: ${{ inputs.allow_repo_verifier }}
-        TITAN_ALLOWED_SIGNERS: ${{ inputs.allowed_signers }}
       run: |
         set -euo pipefail
         # Trust model: the verifier MUST be this action's own pinned copy, not
@@ -60,23 +50,16 @@ runs:
           echo "::error title=CommitProof::verifier not found at $TOOL" >&2
           exit 1
         fi
-        # Trusted signers, when given, replace the audited repo's own list.
-        AS=""
-        if [ -n "$TITAN_ALLOWED_SIGNERS" ]; then
-          AS="${RUNNER_TEMP:-/tmp}/commitproof_allowed_signers"
-          printf '%s\n' "$TITAN_ALLOWED_SIGNERS" > "$AS"
-        fi
         rc=0
         if [ -n "$TITAN_KEY" ]; then
           mkdir -p .titan && printf '%s\n' "$TITAN_KEY" > .titan/key && chmod 600 .titan/key
-          python3 "$TOOL" verify ${AS:+--allowed-signers "$AS"} || rc=$?
+          python3 "$TOOL" verify || rc=$?
         else
-          # no secret: SSH signatures are still checked; HMAC ones are reported unchecked
-          python3 "$TOOL" verify --public-only ${AS:+--allowed-signers "$AS"} || rc=$?
+          python3 "$TOOL" verify --structure-only || rc=$?
         fi
         # The report is wanted MOST when verification fails — it records BROKEN.
         if [ -n "$TITAN_REPORT" ]; then
-          python3 "$TOOL" report --out "$TITAN_REPORT" ${AS:+--allowed-signers "$AS"} || true
+          python3 "$TOOL" report --out "$TITAN_REPORT" || true
         fi
         if [ -n "$TITAN_KEY" ]; then rm -f .titan/key; fi
         exit $rc

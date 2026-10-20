@@ -34,29 +34,18 @@ unreceipted; never backfill them as if they had been recorded at the time —
   removing a middle receipt breaks the walk. Chain rules are fail-closed:
   forks, double-genesis, dangling predecessors, and hash mismatches are hard
   errors, never guesses.
-- **Under a shared key (HMAC receipts):** the signature proves the signer
-  held `.titan/key` — nothing more.
-- **By a named key (SSH receipts, `/receipt-init --ssh`):** the signature
-  proves it was made by the SSH key `.titan/allowed_signers` lists for the
-  receipt's `signer.principal`, and anyone can check it with no secret.
+- **Under a shared key:** the HMAC signature proves the signer held
+  `.titan/key` — nothing more.
 
 ## What it does NOT prove — never let a claim drift past these
 
-1. **Not identity, for HMAC receipts.** HMAC is a symmetric secret: anyone
-   holding the key can produce valid signatures, including re-signing altered
-   history wholesale. If a compliance draft says an HMAC chain "proves who made
-   the change," correct it to "proves the change is unaltered since signing,
+1. **Not identity.** HMAC is a symmetric secret: anyone holding the key can
+   produce valid signatures, including re-signing altered history wholesale.
+   Third-party non-repudiation requires asymmetric signing (Ed25519) or an
+   external timestamp anchor — features of the upstream titan-gate engine,
+   not this plugin. If a user's compliance draft says "proves who made the
+   change," correct it to "proves the change is unaltered since signing,
    under a key the team controls."
-1b. **SSH receipts identify a key, not a person.** They prove which key
-   signed, under the principal `allowed_signers` maps it to. That's a person
-   only as far as key custody goes (a shared or stolen key signs as its owner),
-   and the mapping is only as trustworthy as `allowed_signers`' git history:
-   someone with push access could add a key, visibly. Safe wording: "signed by
-   the SSH key registered to alice@example.com". Not "alice approved it", and
-   not "non-repudiable" without the user's auditor signing off. CI can pin a
-   trusted list (`--allowed-signers` / the action's `allowed_signers` input)
-   rather than trusting the repo under audit. The receipt's `signer` (who and
-   which key) is inside the hash, so swapping it breaks the chain.
 2. **Not review, not quality.** A receipt attests WHAT changed, not that
    anyone approved it or that it was good.
 3. **Not truthful provenance.** `provenance.ai_assisted`, `basis`, `models`,
@@ -93,10 +82,7 @@ Safe sentence template: "Every commit made through our tooling is recorded
 in a hash-chained, HMAC-signed receipt committed alongside the code, carrying
 the commit's content hashes and a recorded provenance claim (AI-assisted or
 not, model and tool version where observed); any post-hoc alteration of
-recorded history is detectable by offline verification." For SSH-signed
-chains, replace "HMAC-signed" with "signed by the committing developer's
-registered SSH key" and add "verifiable by anyone with the repository, with no
-shared secret." `/receipt-report`
+recorded history is detectable by offline verification." `/receipt-report`
 produces the evidence document with its verification result and this
 limits footer attached — do not strip the footer. Do not add "non-repudiable," "cryptographically proves
 authorship," or named framework compliance (SOC2/EU AI Act) without the

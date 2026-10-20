@@ -15,10 +15,6 @@ How to present it:
   signature is invalid, lead with that — do not summarize the counts as if
   they were trustworthy, and never offer to "clean up" receipts so the report
   looks better. The failure is the finding.
-- With SSH-signed receipts the report has a **Signed by** table: each signer's
-  principal, key fingerprint and receipt count. Present it as "signed by the
-  key registered to …", never as proof a person reviewed or approved the
-  change. HMAC receipts appear as "shared repo key" and identify no one.
 - The AI-assisted share counts only receipted commits. Commits made before
   `/receipt-init`, or outside both hooks, have no receipt. Say so if the user
   is about to quote a percentage to an auditor.
