@@ -7,26 +7,19 @@ commit trailers already in git history. Every "never" below is a test: it
 never writes a file, never needs a key, never calls itself evidence, and it
 counts AI assistance by the same rule receipts use."""
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+from _env import clean_env
 from _shell import shell_argv, posix
 
 PLUGIN = Path(__file__).resolve().parents[1]
 RECEIPT = PLUGIN / "core" / "receipt.py"
 
 CLAUDE = "Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
-
-
-def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
-    env.update(extra)
-    return env
 
 
 def sh(cmd, cwd, env=None):
