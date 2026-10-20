@@ -26,7 +26,8 @@ def _block_after_first_line(lines):
     while i < len(lines) and not lines[i].strip():
         i += 1
     assert i < len(lines) and lines[i].startswith("```"), "line 1 must be followed by the install code block"
-    end = next(j for j in range(i + 1, len(lines)) if lines[j].startswith("```"))
+    end = next((j for j in range(i + 1, len(lines)) if lines[j].startswith("```")), None)
+    assert end is not None, "the install block after line 1 is never closed"
     return [l.strip() for l in lines[i + 1:end] if l.strip()]
 
 
@@ -43,8 +44,9 @@ def test_listing_descriptions_lead_with_claude_code():
 
 
 def test_every_readme_install_command_points_at_this_repo():
-    adds = re.findall(r"marketplace add ([\w.-]+/[\w.-]+)", README)
-    installs = re.findall(r"plugin install ([\w-]+)@([\w-]+)", README)
+    # whole tokens, so a URL source or an install without @marketplace can't slip past
+    adds = re.findall(r"marketplace add ([^\s`]+)", README)
+    installs = re.findall(r"plugin install ([^\s`]+)", README)
     assert adds and installs
     assert set(adds) == {REPO_SLUG}, adds
-    assert set(installs) == {(PLUGIN["name"], MARKET["name"])}, installs
+    assert set(installs) == {f"{PLUGIN['name']}@{MARKET['name']}"}, installs
