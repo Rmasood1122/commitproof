@@ -1,5 +1,5 @@
 ---
-description: Set up tamper-evident change receipts in this repository — signing key (gitignored), vendored verifier, and a git post-commit hook so every commit is receipted
+description: Start here — one-time setup that turns on receipts for this repo so every commit (AI-assisted or not) gets a tamper-evident record. Creates a gitignored signing key, a vendored verifier, and a git post-commit hook
 argument-hint: "[--no-git-hook] [--force]"
 ---
 

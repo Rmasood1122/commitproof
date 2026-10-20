@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 — 2026-10-20
+
+First-run fix. Directory stats showed thousands of plugin loads and zero
+receipts: the hook ran on every Bash call, found no `.titan/key`, and exited
+silently. Nobody was told the plugin needs a one-time `/receipt-init`.
+
+- **New: one-time setup notice.** The first successful Claude-made commit in a
+  repo without receipts shows the user a single line naming `/receipt-init`,
+  and tells Claude not to run setup itself. Once per repo (recorded in the
+  plugin's data dir, never in your repo); if that record can't be written the
+  notice is skipped rather than repeated. `TITAN_RECEIPTS_QUIET=1` disables it.
+  Commits still never break; an uninitialized repo still gets no files.
+- **Changed: descriptions lead with the problem.** The skill now triggers on
+  questions like "which commits did Claude write" and "SOC 2 change-control
+  evidence", not only on the word "receipt"; it offers `/receipt-init` when the
+  repo isn't set up. Manifest and marketplace copy rewritten the same way.
+
 ## 1.1.1 — 2026-10-05
 
 Windows correctness. Found by making the test suite run on Windows for the

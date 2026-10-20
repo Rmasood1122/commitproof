@@ -83,7 +83,7 @@ from chain_state import (                       # noqa: E402
 
 SCHEMA = "change-attestation/v1"
 SIGNING = "hmac-sha256-v1"
-PLUGIN_VERSION = "1.1.1"          # kept equal to .claude-plugin/plugin.json (tested)
+PLUGIN_VERSION = "1.2.0"          # kept equal to .claude-plugin/plugin.json (tested)
 KEY_PATH = Path(".titan/key")
 TREE = Path(".titan/attestations")
 TOOLS_DIR = Path(".titan/tools")
@@ -544,10 +544,59 @@ def cmd_hook(args: argparse.Namespace) -> int:
     # rejected) must not receipt the human's existing HEAD as AI-assisted.
     if not _commit_succeeded(payload):
         return 0
+    root = repo_root()
+    if root is not None and not (root / KEY_PATH).exists():
+        _first_run_notice(root)   # uninitialized: tell the user once, then stay silent
+        return 0
     args.auto = True
     args.recorder = "claude-code-hook"
     args.hook_payload = payload if isinstance(payload, dict) else None
     return cmd_create(args)
+
+
+NOTICE_USER = (
+    "Titan Receipts: this commit was NOT receipted — receipts aren't set up in "
+    "this repo yet. Run /receipt-init once to start a tamper-evident audit trail "
+    "of every commit (AI-assisted or not). Shown once per repo; silence with "
+    "TITAN_RECEIPTS_QUIET=1.")
+NOTICE_CLAUDE = (
+    "Titan Receipts is installed but not initialized in this repository, so the "
+    "commit that just succeeded has no receipt. The user has already been shown a "
+    "one-time notice naming /receipt-init. Do not run /receipt-init or "
+    "`receipt.py init` yourself: it creates a signing key and installs a git hook, "
+    "which is the user's decision. Do not repeat the notice unless the user asks "
+    "about receipts, audit trails, or AI provenance; if they do, /receipt-init is "
+    "the one-time setup.")
+
+
+def _state_dir() -> Path:
+    data = os.environ.get("CLAUDE_PLUGIN_DATA")
+    if data:
+        return Path(data)
+    return Path.home() / ".titan-receipts"
+
+
+def _first_run_notice(root: Path) -> None:
+    """Emit the setup notice at most once per repository. The record lives in
+    the plugin's own data dir — never inside the user's repo. If the record
+    can't be written, say nothing: an unrecordable notice would repeat on every
+    commit, and nagging is worse than silence. Never raises."""
+    if os.environ.get("TITAN_RECEIPTS_QUIET"):
+        return
+    try:
+        key = hashlib.sha256(str(Path(root).resolve()).encode()).hexdigest()[:32]
+        marker = _state_dir() / "notified" / key
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        with os.fdopen(fd, "w") as fh:
+            fh.write(str(Path(root).resolve()) + "\n")
+    except OSError:
+        return  # already notified (FileExistsError) or nowhere to record it
+    print(json.dumps({
+        "systemMessage": NOTICE_USER,
+        "hookSpecificOutput": {"hookEventName": "PostToolUse",
+                               "additionalContext": NOTICE_CLAUDE},
+    }))
 
 
 def _commit_succeeded(payload: dict) -> bool:

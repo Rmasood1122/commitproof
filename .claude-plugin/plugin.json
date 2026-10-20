@@ -1,8 +1,8 @@
 {
   "name": "titan-receipts",
   "displayName": "Titan Receipts",
-  "version": "1.1.1",
-  "description": "An audit trail for AI-written code. Every commit gets a tamper-evident receipt — AI-assisted or not, model, Claude Code version, session, file and diff hashes — hash-chained, HMAC-signed, verifiable offline, fail-closed so forked or tampered chains refuse to extend. One command produces the compliance report for SOC 2 / HIPAA / PCI change-control evidence.",
+  "version": "1.2.0",
+  "description": "Know which commits AI wrote, and prove the record wasn't rewritten. Every commit gets a tamper-evident receipt: AI-assisted or not, model, Claude Code version, session, file and diff hashes; hash-chained, HMAC-signed, verified offline. Run /receipt-init once per repo. /receipt-report writes change-control evidence to hand your SOC 2 / HIPAA / PCI auditor.",
   "author": {
     "name": "Rehan Masood",
     "email": "rmasood524@gmail.com",

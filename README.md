@@ -22,7 +22,7 @@ teams have a process document. This gives you receipts.
   "provenance": {
     "ai_assisted": true,
     "basis": ["commit-trailers", "claude-code-hook"],
-    "recorder": "claude-code-hook", "recorder_version": "1.1.1",
+    "recorder": "claude-code-hook", "recorder_version": "1.2.0",
     "session_id": "7f3a…", "models": ["claude-sonnet-4-6"], "claude_code_version": "2.1.288",
     "transcript": { "lines": 412, "content_sha256": "2ef9732e…" }
   },
@@ -58,6 +58,11 @@ git commit -m "…"                # every commit from now on is receipted — h
 /receipt-report                  # markdown evidence: AI-assisted share, by author/month, tooling, verification
 ```
 
+Until you run `/receipt-init`, the plugin receipts nothing. The first time
+Claude commits in a repo that isn't set up, you get a one-line notice saying
+so — once per repo, never again, and it never sets anything up for you.
+Set `TITAN_RECEIPTS_QUIET=1` to turn the notice off.
+
 Receipts land in `.titan/attestations/`, the verifier in `.titan/tools/`.
 Commit both; the key never. Git hooks aren't cloned, so each teammate runs
 `python3 .titan/tools/receipt.py install-hook` once per clone.
@@ -85,7 +90,7 @@ have no receipt — the report says so rather than counting them as human.
 ## Verify in CI
 
 ```yaml
-- uses: Rmasood1122/titan-gate-plugin@v1.1.1
+- uses: Rmasood1122/titan-gate-plugin@v1.2.0
   with:
     key: ${{ secrets.TITAN_KEY }}       # omit for structure-only verification
     report: docs/ai-change-receipts.md  # optional
