@@ -110,3 +110,10 @@ def test_quiet_env_new_and_legacy_names(repo, tmp_path, var):
     r = subprocess.run([sys.executable, str(RECEIPT), "hook"], cwd=repo, input=json.dumps(payload),
                        capture_output=True, text=True, encoding="utf-8", env=env)
     assert r.returncode == 0 and r.stdout.strip() == ""
+
+
+def test_badge_link_is_the_manifest_homepage():
+    sys.path.insert(0, str(ROOT / "core"))
+    import receipt
+    m = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
+    assert receipt.HOMEPAGE == m["homepage"] == REPO_URL

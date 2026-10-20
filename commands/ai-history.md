@@ -1,6 +1,6 @@
 ---
 description: How much of this repo did Claude help write? Instant answer from git history — share of commits and lines added with a Claude trailer, by author and month. No setup, no key, writes nothing
-argument-hint: "[--since 2026-01-01] [--json]"
+argument-hint: "[--since 2026-01-01] [--json] [--badge docs/ai-audit-badge.svg]"
 ---
 
 Scan this repository's git history:
@@ -24,3 +24,6 @@ How to present it:
   Don't run it unasked — it creates a key and installs a git hook, which is
   the user's call.
 - If receipts are already on, point to `/receipt-report` for the signed view.
+- `--badge FILE` writes a README badge labelled "unsigned"; give the user
+  the README line the tool prints. Once receipts exist, the signed badge
+  from `/receipt-report --badge` is the stronger one to show.

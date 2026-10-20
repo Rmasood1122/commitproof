@@ -69,6 +69,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import hmac
+import html
 import json
 import os
 import re
@@ -854,7 +855,50 @@ def cmd_report(args: argparse.Namespace) -> int:
         print(f"report: {args.out}")
     else:
         sys.stdout.write(text)
+    if getattr(args, "badge", None):
+        # a share is shown only beside a verification that passed
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if chain != "intact" or bad_sig:
+            value, color = "verification FAILED", BADGE_RED
+        elif sig_checked:
+            value, color = f"{pct(len(ai), total)} · chain verified", BADGE_BLUE
+        else:
+            value, color = f"{pct(len(ai), total)} · structure only", BADGE_GREY
+        snippet = write_badge(args.badge, value, color,
+                              f"{len(ai)} of {total} receipted commits, as of {today}")
+        print(snippet, file=sys.stdout if getattr(args, "out", None) else sys.stderr)
     return 0
+
+
+# ----------------------------------------------------------------- badge
+HOMEPAGE = "https://github.com/Rmasood1122/ai-audit-trail"   # = plugin.json homepage (tested)
+BADGE_BLUE, BADGE_GREY, BADGE_RED = "#007ec6", "#6c757d", "#e05d44"
+
+
+def write_badge(path: str, value: str, color: str, title: str) -> str:
+    """Write a self-contained shields-style SVG — no badge service, so
+    nothing phones home — and return the README snippet that shows it,
+    linking back to this plugin."""
+    label = "AI-assisted"
+
+    def width(s: str) -> int:   # Verdana 11px: ~6.6px a glyph; 7 leaves slack
+        return int(len(s) * 7) + 12
+
+    lw, vw = width(label), width(value)
+    e = html.escape
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{lw + vw}" height="20" '
+        f'role="img" aria-label="{e(label)}: {e(value)}">'
+        f'<title>{e(title)}</title>'
+        f'<clipPath id="r"><rect width="{lw + vw}" height="20" rx="3" fill="#fff"/></clipPath>'
+        f'<g clip-path="url(#r)"><rect width="{lw}" height="20" fill="#555"/>'
+        f'<rect x="{lw}" width="{vw}" height="20" fill="{color}"/></g>'
+        f'<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" '
+        f'font-size="11"><text x="{lw / 2:.1f}" y="14">{e(label)}</text>'
+        f'<text x="{lw + vw / 2:.1f}" y="14">{e(value)}</text></g></svg>\n')
+    Path(path).write_text(svg, encoding="utf-8", newline="\n")
+    return (f"badge: {path}\nREADME: [![{label}: {value}]({Path(path).as_posix()})]"
+            f"({HOMEPAGE} \"{title}\")")
 
 
 # --------------------------------------------------------------- history
@@ -966,6 +1010,11 @@ def cmd_history(args: argparse.Namespace) -> int:
                  "commit a hash-chained, signed receipt, so a later rewrite of this "
                  "record shows up in `/verify-chain`.")
     sys.stdout.write("\n".join(L) + "\n")
+    if getattr(args, "badge", None):
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        print(write_badge(args.badge, f"{pct(n_ai, n)} of commits · unsigned", BADGE_GREY,
+                          f"{n_ai} of {n} commits carry a Claude trailer, as of {today} "
+                          f"(unsigned, from git history)"), file=sys.stderr)
     return 0
 
 
@@ -1061,9 +1110,11 @@ def main() -> int:
     p = sub.add_parser("verify"); p.add_argument("--structure-only", action="store_true")
     p.set_defaults(fn=cmd_verify)
     p = sub.add_parser("report"); p.add_argument("--out")
+    p.add_argument("--badge", help="also write a README badge SVG here")
     p.set_defaults(fn=cmd_report)
     p = sub.add_parser("history"); p.add_argument("--since", help="e.g. 2026-01-01 or '6 months ago'")
     p.add_argument("--json", action="store_true", help="machine-readable summary")
+    p.add_argument("--badge", help="also write a README badge SVG here")
     p.set_defaults(fn=cmd_history)
     args = ap.parse_args()
     return args.fn(args)
