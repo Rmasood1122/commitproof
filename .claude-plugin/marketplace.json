@@ -5,6 +5,9 @@
     "name": "Rehan Masood",
     "url": "https://github.com/Rmasood1122"
   },
+  "renames": {
+    "titan-receipts": "commitproof"
+  },
   "plugins": [
     {
       "name": "commitproof",

@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+Installs made under the old name (`titan-receipts@titan-receipts-marketplace`)
+stopped loading after a marketplace update once the plugin became
+`commitproof`: Claude Code reported `Plugin "titan-receipts" not found` and the
+plugin showed "failed to load". The marketplace now carries a `renames` entry
+(`titan-receipts` -> `commitproof`), so those installs load again and their
+settings move to the new name on the next marketplace update. Claude Code has
+followed `renames` automatically since 2.1.193, per its changelog.
+
+If you installed it as `titan-receipts`, run this once in a Claude Code
+session to get the current version:
+
+```
+/plugin marketplace update titan-receipts-marketplace
+/plugin install commitproof@titan-receipts-marketplace
+```
+
+If you also installed `commitproof@commitproof`, remove the old marketplace
+instead (`/plugin marketplace remove titan-receipts-marketplace`), so only one
+copy records receipts. To move onto the current name for good, follow
+"Formerly Titan Receipts" in the README. If you installed it as `commitproof`,
+nothing changes: `/plugin marketplace update commitproof` keeps you current.
+
+- `.claude-plugin/marketplace.json`: the `renames` map.
+- `tests/test_rename.py`: pins the map; the old-name check now allows the old
+  name only inside it.
+
 ## 1.3.1 — 2026-10-20
 
 No behavior change. The directory held 1.3.0 under its credential-forward
