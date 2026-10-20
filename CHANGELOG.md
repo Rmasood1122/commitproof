@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.4.0 — 2026-10-20
+
+**SSH signing: receipts that say who signed, verifiable with no secret.**
+HMAC receipts carried two caveats: anyone holding the shared `.titan/key` can
+forge any receipt, and a clone without the key can't check signatures.
+
+- **New: `/receipt-init --ssh [KEY]`.** Each receipt is signed by the
+  committer's own SSH key (`ssh-keygen -Y sign`, namespace
+  `commitproof-receipt`, so it can't be replayed as a git commit signature or
+  the other way round). The key defaults to git's SSH signing key, else
+  `~/.ssh/id_ed25519`. The public key and git email are added to the
+  committed `.titan/allowed_signers`; the key path stays in this clone's local
+  git config. A probe signature must succeed without a terminal before
+  anything is written, so a passphrase-only key is refused at init with how to
+  fix it, not discovered on the first commit. Teammates run it in their own
+  clones; in a repo that already has `allowed_signers`, plain init uses SSH.
+- Receipts record `signing_version: ssh-sig-v1` and a `signer` block
+  (principal, key fingerprint) **inside the hash**: swapping the signer breaks
+  the chain, and verification requires the key that verified to be the one
+  the receipt names.
+- **Verify, report and badge check receipt by receipt**, so a chain can move
+  from HMAC to SSH. `verify` names who signed; `--public-only` checks
+  everything that needs no secret and says HMAC was skipped;
+  `--allowed-signers FILE` trusts a pinned list instead of the repo's. The
+  report gains a **Signed by** table. The badge says "chain verified" only when
+  every signature was checked, "partly verified" when some couldn't be.
+- **CI action:** SSH signatures are checked with no secret (`verify
+  --public-only` when no `key` is given), and a new `allowed_signers` input
+  pins who may sign, outside the repo under audit.
+- **Never silent:** if the Claude Code hook can't sign (key gone, needs a
+  passphrase), the user gets a message saying the commit has no receipt and
+  how to fix it. No unsigned receipt is ever written.
+- An autocrlf checkout of `allowed_signers` verifies the same as the original.
+  HMAC chains are unchanged.
+
 ## 1.3.0 — 2026-10-20
 
 Renamed **Titan Receipts → CommitProof** (`commitproof`), with an answer
