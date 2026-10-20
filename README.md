@@ -131,7 +131,7 @@ and a report built as change-control evidence. The two work side by side.
 ## Verify in CI
 
 ```yaml
-- uses: Rmasood1122/commitproof@v1.3.0
+- uses: Rmasood1122/commitproof@v1.3.1
   with:
     key: ${{ secrets.TITAN_KEY }}       # omit for structure-only verification
     report: docs/ai-change-receipts.md  # optional
@@ -189,7 +189,7 @@ lines, because a receipt system that overclaims is worse than none.
   Code version, its line count and sha256. Transcript content is never copied
   into the receipt. Writes one JSON file under `.titan/attestations/`.
 - **`/receipt-init`:** creates `.titan/key` and adds it to `.gitignore`,
-  copies `receipt.py`, `canonical.py` and `chain_state.py` into
+  copies `receipt.py`, `badge.py`, `canonical.py` and `chain_state.py` into
   `.titan/tools/`, and installs or appends to `.git/hooks/post-commit`.
   Nothing else in your repo changes.
 - **`/ai-history`, `/verify-chain`, `/receipt-report`:** read-only, apart
