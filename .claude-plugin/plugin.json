@@ -1,32 +1,32 @@
 {
-  "name": "titan-receipts",
-  "displayName": "Titan Receipts",
-  "version": "1.2.0",
-  "description": "Know which commits AI wrote, and prove the record wasn't rewritten. Every commit gets a tamper-evident receipt: AI-assisted or not, model, Claude Code version, session, file and diff hashes; hash-chained, HMAC-signed, verified offline. Run /receipt-init once per repo. /receipt-report writes change-control evidence to hand your SOC 2 / HIPAA / PCI auditor.",
+  "name": "commitproof",
+  "displayName": "CommitProof: AI Audit Trail",
+  "version": "1.3.0",
+  "description": "An audit trail for AI-written code. /ai-history answers 'how much of this repo did Claude help write?' in seconds from git history, no setup. /receipt-init then gives every commit a tamper-evident receipt (AI-assisted or not, model, Claude Code version, file hashes): hash-chained, signed, verified offline. /receipt-report turns the chain into change-control evidence for SOC 2, HIPAA or PCI audits.",
   "author": {
     "name": "Rehan Masood",
     "email": "rmasood524@gmail.com",
     "url": "https://github.com/Rmasood1122"
   },
-  "homepage": "https://github.com/Rmasood1122/titan-gate-plugin",
-  "repository": "https://github.com/Rmasood1122/titan-gate-plugin",
+  "homepage": "https://github.com/Rmasood1122/commitproof",
+  "repository": "https://github.com/Rmasood1122/commitproof",
   "license": "MIT",
   "keywords": [
     "audit-trail",
+    "ai-attribution",
+    "ai-provenance",
+    "code-provenance",
     "ai-governance",
-    "receipts",
     "tamper-evident",
-    "provenance",
     "compliance",
-    "git",
+    "change-control",
     "soc2",
     "hipaa",
     "ai-bill-of-materials",
-    "change-control",
-    "fail-closed"
+    "git"
   ],
   "icon": "./.claude-plugin/icon.svg",
-  "supportUrl": "https://github.com/Rmasood1122/titan-gate-plugin/issues",
-  "documentationUrl": "https://github.com/Rmasood1122/titan-gate-plugin#readme",
-  "privacyPolicyUrl": "https://github.com/Rmasood1122/titan-gate-plugin/blob/main/PRIVACY.md"
+  "supportUrl": "https://github.com/Rmasood1122/commitproof/issues",
+  "documentationUrl": "https://github.com/Rmasood1122/commitproof#readme",
+  "privacyPolicyUrl": "https://github.com/Rmasood1122/commitproof/blob/main/PRIVACY.md"
 }

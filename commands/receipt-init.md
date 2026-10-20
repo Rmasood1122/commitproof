@@ -6,7 +6,7 @@ argument-hint: "[--no-git-hook] [--force]"
 Initialize receipts in the user's current repository:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" init $ARGUMENTS
+sh "${CLAUDE_PLUGIN_ROOT}/core/py.sh" "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" init $ARGUMENTS
 ```
 
 After it succeeds, explain the three facts the user must not learn later:

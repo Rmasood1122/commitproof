@@ -6,7 +6,7 @@ argument-hint: "[--structure-only]"
 Verify everything:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" verify $ARGUMENTS
+sh "${CLAUDE_PLUGIN_ROOT}/core/py.sh" "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" verify $ARGUMENTS
 ```
 
 Report the result exactly as it is:

@@ -1,12 +1,12 @@
 ---
 description: Generate a markdown compliance report from the receipt chain — AI-assisted share, by author/month/recorder, models and tool versions recorded, chain verification result, honest limits
-argument-hint: "[--out docs/ai-change-receipts.md]"
+argument-hint: "[--out docs/ai-change-receipts.md] [--badge docs/ai-audit-badge.svg]"
 ---
 
 Produce the report:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" report $ARGUMENTS
+sh "${CLAUDE_PLUGIN_ROOT}/core/py.sh" "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" report $ARGUMENTS
 ```
 
 How to present it:
@@ -21,6 +21,12 @@ How to present it:
 - The "What this report proves — and does not" footer stays in the document.
   If the user wants to drop it for a cleaner look, decline and explain: a
   report that overclaims is worse than no report.
+- `--badge FILE` writes a README badge from the same verification: it shows
+  "chain verified" only when the chain is intact and every signature
+  checked out, "structure only" without the key, and "verification FAILED"
+  (no share) otherwise. Give the user the README line the tool prints.
+  Never hand-edit the SVG or regenerate it somewhere the key passes so it
+  looks better — the badge is a claim on their front page.
 - Framework mapping (SOC 2 CC8.1, HIPAA change control, PCI-DSS §6, ISO
   42001, EU AI Act record-keeping): offer it as input to THEIR auditor's
   judgement, never as a conclusion. The receipt-integrity skill has the safe

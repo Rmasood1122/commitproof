@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/core/receipt.py\" hook || true"
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/core/py.sh\" \"${CLAUDE_PLUGIN_ROOT}/core/receipt.py\" hook || true"
           }
         ]
       }

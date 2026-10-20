@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.3.0 — 2026-10-20
+
+Renamed **Titan Receipts → CommitProof** (`commitproof`), with an answer
+in the first minute. Installs were loading the plugin and producing nothing:
+the only useful output came after `/receipt-init`, and on some Windows
+machines the hooks could not run at all.
+
+- **New: `/ai-history`.** "How much of this repo did Claude help write?" from
+  the Claude trailers already in git history: commits and lines added, by
+  author and month; `--since`, `--json`. Writes nothing, needs no key, and
+  labels itself unsigned — a starting estimate, not evidence. The first-run
+  notice and the skill now point to it.
+- **New: `--badge FILE`** on `report` and `history`: a self-contained SVG and
+  a README line linking back here. It says "chain verified" only when the
+  chain is intact and every signature checks out, "structure only" without
+  the key, "verification FAILED" with no share otherwise, and "unsigned" from
+  trailers.
+- **Fixed: hooks failed silently on Windows without `python3`.** The classic
+  python.org installer ships `python.exe`/`py.exe` but no `python3.exe`, and
+  the WindowsApps alias only prints a Store message. The plugin hook, the
+  setup notice and the git post-commit hook now use the first Python 3.10+
+  among `python3`, `python`, `py` (`core/py.sh`). Re-running `install-hook`
+  upgrades a hook an older version wrote; `*.sh` is pinned to LF so an
+  autocrlf clone cannot break the launcher.
+- **Fixed: GitHub-style `Co-authored-by: Claude` counted as human.** Trailer
+  keys are case-insensitive now, with one rule shared by receipts and history.
+- **Fixed: Windows output encoding.** A piped stdout was cp1252, so dashes
+  reached Claude Code as invalid UTF-8 and a non-Latin author name crashed
+  `report`; `report --out` is now written as UTF-8. `--out` and `--badge`
+  create missing folders.
+- **Renamed** plugin, marketplace, action and messages to `commitproof`;
+  the repo moves to `Rmasood1122/commitproof` (GitHub redirects the old
+  URL). `.titan/` data paths are unchanged, so existing chains keep
+  verifying; the old git-hook mark and `TITAN_RECEIPTS_QUIET` are still
+  honoured. Switching an install: see the README's "Formerly Titan Receipts".
+- README rebuilt around the two questions, with a real sample report and
+  history output in `docs/` (from a demo repo, labelled as such).
+
 ## 1.2.0 — 2026-10-20
 
 First-run fix. Directory stats showed thousands of plugin loads and zero

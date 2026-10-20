@@ -1,4 +1,4 @@
-name: "Titan Receipts — verify chain"
+name: "CommitProof — verify receipt chain"
 description: "Verify a repository's .titan/attestations/ receipt chain offline with THIS action's pinned verifier (not the repo's). Without a key: chain structure + content hashes (and says signatures were not checked). With the key secret: full signature verification."
 branding:
   icon: shield
@@ -43,11 +43,11 @@ runs:
         # explicit, loudly-documented opt-in.
         TOOL="${GITHUB_ACTION_PATH}/core/receipt.py"
         if [ "${TITAN_ALLOW_REPO_VERIFIER}" = "true" ] && [ -f ".titan/tools/receipt.py" ]; then
-          echo "::warning title=Titan Receipts::Running the repo's own vendored verifier (allow_repo_verifier=true). This is NOT an independent check — the audited repo supplied the verifier. Result is self-reported."
+          echo "::warning title=CommitProof::Running the repo's own vendored verifier (allow_repo_verifier=true). This is NOT an independent check — the audited repo supplied the verifier. Result is self-reported."
           TOOL=".titan/tools/receipt.py"
         fi
         if [ ! -f "$TOOL" ]; then
-          echo "::error title=Titan Receipts::verifier not found at $TOOL" >&2
+          echo "::error title=CommitProof::verifier not found at $TOOL" >&2
           exit 1
         fi
         rc=0

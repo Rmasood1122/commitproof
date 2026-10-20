@@ -57,7 +57,7 @@ def test_init_vendors_tools_and_installs_git_hook(repo):
         assert (repo / ".titan/tools" / f).read_bytes() == (PLUGIN / "core" / f).read_bytes()
     hook = repo / ".git/hooks/post-commit"
     assert hook.exists() and os.access(hook, os.X_OK)
-    assert "titan-receipts" in hook.read_text()
+    assert "commitproof" in hook.read_text()
     gi = (repo / ".gitignore").read_text()
     assert ".titan/key" in gi and ".titan/tools/__pycache__/" in gi
 
@@ -76,10 +76,10 @@ def test_install_hook_appends_to_existing_hook_never_clobbers(repo):
     r = run(["install-hook"], repo)
     assert r.returncode == 0, r.stderr
     text = hook.read_text()
-    assert "echo theirs" in text and "titan-receipts" in text
+    assert "echo theirs" in text and "commitproof" in text
     # idempotent
     run(["install-hook"], repo)
-    assert hook.read_text().count("titan-receipts post-commit hook") == 1
+    assert hook.read_text().count("commitproof post-commit hook") == 1
 
 
 def test_human_commit_gets_receipt_with_ai_assisted_false(repo):
@@ -322,7 +322,7 @@ def test_install_hook_refuses_when_existing_hook_exits_first(repo):
     hook.write_text("#!/bin/sh\n. \"$(dirname \"$0\")/h\"\nexit $c\n")
     r = run(["install-hook"], repo)
     assert r.returncode == 1 and "NOT installed" in r.stdout
-    assert "titan-receipts" not in hook.read_text()
+    assert "commitproof" not in hook.read_text()
 
 
 def test_install_hook_refuses_non_shell_hook(repo):
