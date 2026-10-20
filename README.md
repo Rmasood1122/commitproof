@@ -44,7 +44,7 @@ Then, in any repository:
 
 ([full sample](docs/sample-ai-history.md), from a demo repo.) It reads the
 `Co-Authored-By: Claude …` and `Claude-Session:` trailers Claude Code already
-puts on commits, so it labels itself **unsigned**: a starting estimate, not
+puts on commits (and the Linux kernel's `Assisted-by: Claude:…` form), so it labels itself **unsigned**: a starting estimate, not
 evidence. Trailers are plain text and history can be rewritten. That gap is
 what receipts close.
 

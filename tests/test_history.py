@@ -118,6 +118,16 @@ def test_claude_session_trailer_counts_and_human_coauthor_does_not(repo, msgdir)
     assert "2 (50%)" in out
 
 
+def test_kernel_style_assisted_by_trailer_counts(repo, msgdir):
+    """The Linux kernel records AI help as `Assisted-by: AGENT:MODEL`; 1,732
+    kernel commits named Claude that way and were counted as 0."""
+    commit(repo, msgdir, "k.c", 10, "mm: fix\n\nAssisted-by: Claude:claude-opus-4-6\n"
+                                    "Signed-off-by: Dev <dev@example.com>\n")
+    commit(repo, msgdir, "k2.c", 10, "mm: other\n\nAssisted-by: coccinelle\n")
+    out = run(repo, "history").stdout
+    assert "| 4 |" in out and "2 (50%)" in out
+
+
 def test_by_author_and_by_month(repo):
     out = run(repo, "history").stdout
     assert "## By author" in out and "## By month" in out
@@ -207,3 +217,12 @@ def test_receipts_use_the_same_case_insensitive_trailer_rule(repo, msgdir):
     assert len(receipts) == 1
     prov = json.loads(receipts[0].read_text())["provenance"]
     assert prov["ai_assisted"] is True and prov["basis"] == ["commit-trailers"]
+
+
+def test_receipts_record_and_count_assisted_by(repo, msgdir):
+    assert run(repo, "init", "--no-git-hook").returncode == 0
+    commit(repo, msgdir, "k.c", 3, "fix: k\n\nAssisted-by: Claude:claude-opus-4-6\n")
+    assert run(repo, "create").returncode == 0
+    r = json.loads(next((repo / ".titan" / "attestations").rglob("*.json")).read_text())
+    assert r["provenance"]["ai_assisted"] is True
+    assert r["attribution"]["assisted_by"] == ["Claude:claude-opus-4-6"]

@@ -100,13 +100,16 @@ AI_TRAILER_RE = re.compile(r"claude|anthropic", re.I)
 # GitHub form as ai_assisted=false.
 CO_AUTHOR_RE = re.compile(r"^Co-Authored-By:\s*(.+)$", re.M | re.I)
 SESSION_RE = re.compile(r"^Claude-Session:\s*(\S+)$", re.M | re.I)
+# The Linux kernel's form: `Assisted-by: AGENT:MODEL` (1,732 kernel commits in
+# a year named Claude this way and were counted as human).
+ASSISTED_RE = re.compile(r"^Assisted-by:\s*(.+)$", re.M | re.I)
 
 
 def ai_trailers(msg: str) -> bool:
-    """True when a commit message carries a Claude co-author or session
-    trailer. The one rule receipts and `history` both count by."""
-    return (any(AI_TRAILER_RE.search(c) for c in CO_AUTHOR_RE.findall(msg))
-            or bool(SESSION_RE.search(msg)))
+    """True when a commit message carries a Claude co-author, assisted-by or
+    session trailer. The one rule receipts and `history` both count by."""
+    named = CO_AUTHOR_RE.findall(msg) + ASSISTED_RE.findall(msg)
+    return any(AI_TRAILER_RE.search(c) for c in named) or bool(SESSION_RE.search(msg))
 
 
 def die(msg: str, code: int = 2) -> "int":
@@ -360,10 +363,13 @@ def _attribution(subject_body: str) -> dict:
     """Copy attribution trailers from the commit message — an ATTESTATION
     by the commit author, recorded verbatim, never invented here."""
     co = CO_AUTHOR_RE.findall(subject_body)
+    asst = ASSISTED_RE.findall(subject_body)
     ses = SESSION_RE.findall(subject_body)
     out: dict = {"source": "commit-trailers"}
     if co:
         out["co_authored_by"] = co
+    if asst:
+        out["assisted_by"] = asst
     if ses:
         out["session"] = ses[0]
     for env in ("CLAUDE_SESSION_ID",):
@@ -974,7 +980,7 @@ def cmd_history(args: argparse.Namespace) -> int:
 
     L = [f"# How much of {Path(root).name} did Claude help write?", "",
          "Read from the commit trailers already in this repo's git history "
-         "(`Co-Authored-By: Claude …`, `Claude-Session:`). No setup, no key, "
+         "(`Co-Authored-By: Claude …`, `Assisted-by: Claude…`, `Claude-Session:`). No setup, no key, "
          "nothing written — and **unsigned**: a starting estimate, not evidence.", "",
          "| | commits | lines added |", "|---|---|---|",
          f"| Scanned (non-merge) | {n} | {lines} |",
