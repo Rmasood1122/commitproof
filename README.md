@@ -174,6 +174,27 @@ The bundled `receipt-integrity` skill keeps compliance language inside these
 lines, because a receipt system that overclaims is worse than none.
 </details>
 
+## What it runs and touches
+
+- **Plugin hook (`PostToolUse`, every Bash tool call).** Starts
+  `core/py.sh`, which runs `core/receipt.py hook` under the first Python 3.10+
+  it finds. It reads the hook's JSON from stdin and exits unless the command
+  was a successful `git commit`. In a repo without receipts it shows the
+  one-time setup notice and records that it did in the plugin's data folder
+  (a hash of the repo path, nothing inside your repo).
+- **When it writes a receipt** (receipts on, commit made): runs read-only git
+  commands, hashes the changed files, and reads the Claude Code session
+  transcript named in the hook payload to record model names, the Claude
+  Code version, its line count and sha256. Transcript content is never copied
+  into the receipt. Writes one JSON file under `.titan/attestations/`.
+- **`/receipt-init`:** creates `.titan/key` and adds it to `.gitignore`,
+  copies `receipt.py`, `canonical.py` and `chain_state.py` into
+  `.titan/tools/`, and installs or appends to `.git/hooks/post-commit`.
+  Nothing else in your repo changes.
+- **`/ai-history`, `/verify-chain`, `/receipt-report`:** read-only, apart
+  from the `--out` or `--badge` file you name.
+- **Network:** none. No telemetry, no package installs, no service.
+
 ## Requirements and privacy
 
 Claude Code, git, and Python 3.10+ on PATH as `python3`, `python` or `py`.

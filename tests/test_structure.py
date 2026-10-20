@@ -120,3 +120,12 @@ def test_readme_documents_provenance_and_coverage_limits():
     assert "ai_assisted" in readme
     assert "install-hook" in readme            # hooks aren't cloned; README must say so
     assert "recorded claim" in readme.lower() or "recorded claims" in readme.lower()
+
+
+def test_readme_discloses_what_the_plugin_runs():
+    """The directory's security scan expects the README to describe everything
+    the plugin runs, sends or fetches; the hook runs on every Bash call."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "## What it runs and touches" in readme
+    for must in ("every Bash tool call", "transcript", ".git/hooks/post-commit", "Network:** none"):
+        assert must in readme, must
