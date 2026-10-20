@@ -6,13 +6,13 @@ three different names. The public name is now commitproof. Data paths
 (.titan/, TITAN_KEY) are unchanged so existing chains keep verifying, and
 anything an older version installed is still recognized as ours."""
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+from _env import clean_env
 from _shell import shell_argv
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,8 +85,7 @@ def test_legacy_block_appended_to_a_foreign_hook_is_still_ours(repo):
 
 
 def test_report_and_notice_use_the_new_name(repo, tmp_path):
-    env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
+    env = clean_env()
     env.update(CLAUDECODE="1", CLAUDE_PLUGIN_DATA=str(tmp_path / "data"))
     payload = {"tool_name": "Bash", "tool_input": {"command": "git commit -m x"},
                "tool_response": {"stdout": "[main 1a2b3c4] x"}}
@@ -102,8 +101,7 @@ def test_report_and_notice_use_the_new_name(repo, tmp_path):
 
 @pytest.mark.parametrize("var", ["COMMITPROOF_QUIET", "TITAN_RECEIPTS_QUIET"])
 def test_quiet_env_new_and_legacy_names(repo, tmp_path, var):
-    env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
+    env = clean_env()
     env.update(CLAUDECODE="1", CLAUDE_PLUGIN_DATA=str(tmp_path / "data"), **{var: "1"})
     payload = {"tool_name": "Bash", "tool_input": {"command": "git commit -m x"},
                "tool_response": {"stdout": "[main 1a2b3c4] x"}}
@@ -114,9 +112,9 @@ def test_quiet_env_new_and_legacy_names(repo, tmp_path, var):
 
 def test_badge_link_is_the_manifest_homepage():
     sys.path.insert(0, str(ROOT / "core"))
-    import receipt
+    import badge
     m = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
-    assert receipt.HOMEPAGE == m["homepage"] == REPO_URL
+    assert badge.HOMEPAGE == m["homepage"] == REPO_URL
 
 
 def test_readme_install_and_action_pin_match_this_release():

@@ -209,7 +209,8 @@ lines, because a receipt system that overclaims is worse than none.
   (or, with `--ssh`, adds your SSH public key and git email to
   `.titan/allowed_signers` and records the key's path in this clone's local
   git config as `commitproof.signingkey`), copies `receipt.py`,
-  `canonical.py`, `chain_state.py` and `signing.py` into `.titan/tools/`, and
+  `badge.py`, `canonical.py`, `chain_state.py` and `signing.py` into
+  `.titan/tools/`, and
   installs or appends to `.git/hooks/post-commit`. Nothing else in your repo
   changes.
 - **SSH signing:** runs your local `ssh-keygen` (`-Y sign` for each receipt,

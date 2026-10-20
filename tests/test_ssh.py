@@ -27,11 +27,7 @@ KEYGEN = shutil.which("ssh-keygen")
 pytestmark = pytest.mark.skipif(KEYGEN is None, reason="needs ssh-keygen (OpenSSH 8.2+)")
 
 
-def env(**extra):
-    e = {k: v for k, v in os.environ.items()
-         if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "COMMITPROOF_"))}
-    e.update(extra)
-    return e
+from _env import clean_env as env   # noqa: E402  the one env builder (see _env.py)
 
 
 def sh(cmd, cwd):

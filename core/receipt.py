@@ -72,7 +72,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import hmac
-import html
 import json
 import os
 import re
@@ -85,6 +84,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import signing                                 # noqa: E402
+from badge import BADGE_BLUE, BADGE_GREY, BADGE_RED, write_badge   # noqa: E402
 from canonical import canonical_bytes           # noqa: E402
 from chain_state import (                       # noqa: E402
     GENESIS, ChainStateError, latest_receipt_hash,
@@ -367,7 +367,7 @@ def vendor_tools(root: Path) -> list[str]:
     src_dir = Path(__file__).resolve().parent
     (root / TOOLS_DIR).mkdir(parents=True, exist_ok=True)
     written = []
-    for name in ("receipt.py", "canonical.py", "chain_state.py", "signing.py"):
+    for name in ("receipt.py", "badge.py", "canonical.py", "chain_state.py", "signing.py"):
         src = src_dir / name
         if not src.exists():
             continue
@@ -1117,38 +1117,6 @@ def cmd_report(args: argparse.Namespace) -> int:
                               f"{len(ai)} of {total} receipted commits, as of {today}")
         print(snippet, file=sys.stdout if getattr(args, "out", None) else sys.stderr)
     return 0
-
-
-# ----------------------------------------------------------------- badge
-HOMEPAGE = "https://github.com/Rmasood1122/commitproof"   # = plugin.json homepage (tested)
-BADGE_BLUE, BADGE_GREY, BADGE_RED = "#007ec6", "#6c757d", "#e05d44"
-
-
-def write_badge(path: str, value: str, color: str, title: str) -> str:
-    """Write a self-contained shields-style SVG — no badge service, so
-    nothing phones home — and return the README snippet that shows it,
-    linking back to this plugin."""
-    label = "AI-assisted"
-
-    def width(s: str) -> int:   # Verdana 11px measures ~5.6–6.3px a glyph here
-        return int(len(s) * 6.5) + 10
-
-    lw, vw = width(label), width(value)
-    e = html.escape
-    svg = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{lw + vw}" height="20" '
-        f'role="img" aria-label="{e(label)}: {e(value)}">'
-        f'<title>{e(title)}</title>'
-        f'<clipPath id="r"><rect width="{lw + vw}" height="20" rx="3" fill="#fff"/></clipPath>'
-        f'<g clip-path="url(#r)"><rect width="{lw}" height="20" fill="#555"/>'
-        f'<rect x="{lw}" width="{vw}" height="20" fill="{color}"/></g>'
-        f'<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" '
-        f'font-size="11"><text x="{lw / 2:.1f}" y="14">{e(label)}</text>'
-        f'<text x="{lw + vw / 2:.1f}" y="14">{e(value)}</text></g></svg>\n')
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(svg, encoding="utf-8", newline="\n")
-    return (f"badge: {path}\nREADME: [![{label}: {value}]({Path(path).as_posix()})]"
-            f"({HOMEPAGE} \"{title}\")")
 
 
 # --------------------------------------------------------------- history

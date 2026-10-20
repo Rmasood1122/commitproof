@@ -42,6 +42,22 @@ forge any receipt, and a clone without the key can't check signatures.
 - An autocrlf checkout of `allowed_signers` verifies the same as the original.
   HMAC chains are unchanged.
 
+## 1.3.1 — 2026-10-20
+
+No behavior change. The directory held 1.3.0 under its credential-forward
+rule: a file that reads a `*_SESSION_ID` environment variable and also
+contains an `https://` host string is treated as able to send a credential
+somewhere. Nothing here reads a credential or opens a network connection, but
+1.3.0 put the badge's homepage URL into `receipt.py`, the file that records
+`CLAUDE_SESSION_ID` into receipts, and two new tests paired an environment
+copy with a repo URL.
+
+- `core/badge.py`: badge generation and the homepage constant moved out of
+  `receipt.py`. `receipt.py` keeps the session/version reads and now holds no
+  URLs. `badge.py` is vendored into `.titan/tools/` alongside the others.
+- `tests/_env.py`: the single `clean_env()` helper; `test_history.py` and
+  `test_rename.py` use it instead of copying `os.environ` themselves.
+
 ## 1.3.0 — 2026-10-20
 
 Renamed **Titan Receipts → CommitProof** (`commitproof`), with an answer
