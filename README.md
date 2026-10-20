@@ -18,8 +18,9 @@ Teams using Claude Code get asked two questions:
    from the git history you already have. No setup, no key, writes nothing.
 2. **"Can you prove that record hasn't been edited since?"** `/receipt-init`
    gives every commit from then on a tamper-evident receipt: hash-chained,
-   signed, verifiable offline. `/receipt-report` turns the chain into the
-   change-control evidence a SOC 2, HIPAA or PCI auditor asks for.
+   signed, verifiable offline. `/receipt-report` turns the chain into a
+   change-control report you can give a SOC 2, HIPAA or PCI auditor as
+   supporting evidence.
 
 ## Try it in 30 seconds
 

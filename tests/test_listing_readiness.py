@@ -29,3 +29,15 @@ def test_keywords_are_a_nonempty_list_of_strings():
 
 def test_marketplace_lists_exactly_this_plugin():
     assert [p["name"] for p in MARKET["plugins"]] == [PLUGIN["name"]]
+
+
+def test_compliance_wording_offers_evidence_and_claims_no_requirement():
+    """No SOC 2, HIPAA or PCI control requires AI-code provenance, so the README and
+    listing may offer the report as supporting evidence, never as what an auditor asks for."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for text in (readme, PLUGIN["description"]):
+        lowered = text.lower()
+        for overclaim in ("auditor asks for", "auditors ask for", "required by soc", "soc 2 requires"):
+            assert overclaim not in lowered, overclaim
+        if "soc 2" in lowered:
+            assert "supporting evidence" in lowered, "SOC 2 mentioned without the supporting-evidence framing"
