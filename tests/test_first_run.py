@@ -24,7 +24,7 @@ COMMIT_OK = {"tool_name": "Bash",
 
 def env_with(data_dir, **extra):
     env = {k: v for k, v in os.environ.items()
-           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_"))}
+           if k != "CLAUDECODE" and not k.startswith(("CLAUDE_", "TITAN_RECEIPTS_", "AI_AUDIT_TRAIL_"))}
     env.update(CLAUDECODE="1", CLAUDE_PLUGIN_DATA=str(data_dir))
     env.update(extra)
     return env
@@ -77,6 +77,7 @@ def test_uninitialized_commit_gets_one_notice_naming_receipt_init(repo, data):
     n = notice(r.stdout)
     assert n is not None, f"expected a JSON notice, got {r.stdout!r}"
     assert "/receipt-init" in n["systemMessage"]
+    assert "/ai-history" in n["systemMessage"]   # value now, before any setup
     ctx = n["hookSpecificOutput"]
     assert ctx["hookEventName"] == "PostToolUse"
     assert "/receipt-init" in ctx["additionalContext"]

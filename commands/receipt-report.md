@@ -6,7 +6,7 @@ argument-hint: "[--out docs/ai-change-receipts.md]"
 Produce the report:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" report $ARGUMENTS
+sh "${CLAUDE_PLUGIN_ROOT}/core/py.sh" "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" report $ARGUMENTS
 ```
 
 How to present it:

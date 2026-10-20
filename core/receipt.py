@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""titan-gate plugin — change-attestation receipts for AI-assisted commits.
+"""ai-audit-trail — change-attestation receipts for AI-assisted commits.
 
 Profile: schema_version "change-attestation/v1"
   - Canonicalization: TRS-1 sorted-keys (vendored canonical.py, byte-
@@ -57,6 +57,10 @@ Subcommands:
   report [--out F]    markdown summary for a compliance evidence folder:
                       receipts, AI-assisted share, by recorder/author/month,
                       chain verification result, and the honest-limits footer
+  history [--since D] [--json]
+                      zero-setup: share of commits (and lines added) carrying
+                      a Claude trailer, from git history alone. Writes
+                      nothing, needs no key, and labels itself unsigned
 
 Exit codes: 0 ok · 1 verification/chain failure · 2 usage/config error.
 """
@@ -83,12 +87,25 @@ from chain_state import (                       # noqa: E402
 
 SCHEMA = "change-attestation/v1"
 SIGNING = "hmac-sha256-v1"
-PLUGIN_VERSION = "1.2.0"          # kept equal to .claude-plugin/plugin.json (tested)
+PLUGIN_VERSION = "1.3.0"          # kept equal to .claude-plugin/plugin.json (tested)
 KEY_PATH = Path(".titan/key")
 TREE = Path(".titan/attestations")
 TOOLS_DIR = Path(".titan/tools")
-HOOK_MARK = "# titan-receipts post-commit hook"
+HOOK_MARK = "# ai-audit-trail post-commit hook"
+LEGACY_HOOK_MARKS = ("# titan-receipts post-commit hook",)   # v1.0–1.2, still ours
 AI_TRAILER_RE = re.compile(r"claude|anthropic", re.I)
+# Trailer keys are case-insensitive: Claude Code writes Co-Authored-By, GitHub
+# squash merges write Co-authored-by. A case-sensitive match recorded the
+# GitHub form as ai_assisted=false.
+CO_AUTHOR_RE = re.compile(r"^Co-Authored-By:\s*(.+)$", re.M | re.I)
+SESSION_RE = re.compile(r"^Claude-Session:\s*(\S+)$", re.M | re.I)
+
+
+def ai_trailers(msg: str) -> bool:
+    """True when a commit message carries a Claude co-author or session
+    trailer. The one rule receipts and `history` both count by."""
+    return (any(AI_TRAILER_RE.search(c) for c in CO_AUTHOR_RE.findall(msg))
+            or bool(SESSION_RE.search(msg)))
 
 
 def die(msg: str, code: int = 2) -> "int":
@@ -240,7 +257,14 @@ POST_COMMIT = f"""#!/bin/sh
 if [ -n "$CLAUDECODE" ]; then exit 0; fi
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 if [ -f "$root/.titan/tools/receipt.py" ]; then
-  python3 "$root/.titan/tools/receipt.py" create --auto --recorder git-post-commit || true
+  # First Python 3.10+ on PATH: Windows can have python/py but no python3,
+  # and its WindowsApps python3 alias only prints a Store message.
+  for py in python3 python py; do
+    if "$py" -c 'import sys; sys.exit(sys.version_info < (3, 10))' </dev/null >/dev/null 2>&1; then
+      "$py" "$root/.titan/tools/receipt.py" create --auto --recorder git-post-commit || true
+      break
+    fi
+  done
 fi
 exit 0
 """
@@ -275,7 +299,12 @@ def install_git_hook(root: Path) -> str:
     hook = hooks_dir / "post-commit"
     if hook.exists():
         existing = hook.read_text()
-        if HOOK_MARK in existing:
+        marks = (HOOK_MARK, *LEGACY_HOOK_MARKS)
+        if any(existing.startswith(f"#!/bin/sh\n{m}") for m in marks) and existing != POST_COMMIT:
+            # the whole file is ours, from an older version (python3-only)
+            hook.write_text(POST_COMMIT, newline="\n")
+            return "git hook: updated .git/hooks/post-commit"
+        if any(m in existing for m in marks):
             return "git hook: already installed"
         first = existing.splitlines()[0] if existing.splitlines() else ""
         if first.startswith("#!") and not re.search(r"/(sh|bash|dash|zsh)\b", first):
@@ -296,10 +325,10 @@ def install_git_hook(root: Path) -> str:
         # append, never clobber someone else's hook
         body = existing.rstrip("\n") + "\n\n" + "\n".join(
             ln for ln in POST_COMMIT.splitlines() if not ln.startswith("#!")) + "\n"
-        hook.write_text(body)
+        hook.write_text(body, newline="\n")   # sh scripts: LF on every platform
         action = "git hook: appended to existing post-commit"
     else:
-        hook.write_text(POST_COMMIT)
+        hook.write_text(POST_COMMIT, newline="\n")
         action = "git hook: installed .git/hooks/post-commit"
     try:
         hook.chmod(hook.stat().st_mode | 0o111)
@@ -329,8 +358,8 @@ def cmd_install_hook(args: argparse.Namespace) -> int:
 def _attribution(subject_body: str) -> dict:
     """Copy attribution trailers from the commit message — an ATTESTATION
     by the commit author, recorded verbatim, never invented here."""
-    co = re.findall(r"^Co-Authored-By:\s*(.+)$", subject_body, re.M)
-    ses = re.findall(r"^Claude-Session:\s*(\S+)$", subject_body, re.M)
+    co = CO_AUTHOR_RE.findall(subject_body)
+    ses = SESSION_RE.findall(subject_body)
     out: dict = {"source": "commit-trailers"}
     if co:
         out["co_authored_by"] = co
@@ -392,10 +421,9 @@ def _provenance(msg: str, recorder: str, hook: dict | None) -> dict:
     """Why we believe this commit was (or wasn't) AI-assisted, and what we
     could record about the tool that assisted. Every field is a recorded
     claim; `basis` says where each came from."""
-    co = re.findall(r"^Co-Authored-By:\s*(.+)$", msg, re.M)
-    ses_trailer = re.findall(r"^Claude-Session:\s*(\S+)$", msg, re.M)
+    ses_trailer = SESSION_RE.findall(msg)
     basis: list[str] = []
-    if any(AI_TRAILER_RE.search(c) for c in co) or ses_trailer:
+    if ai_trailers(msg):
         basis.append("commit-trailers")
     if recorder == "claude-code-hook":
         basis.append("claude-code-hook")
@@ -555,12 +583,13 @@ def cmd_hook(args: argparse.Namespace) -> int:
 
 
 NOTICE_USER = (
-    "Titan Receipts: this commit was NOT receipted — receipts aren't set up in "
-    "this repo yet. Run /receipt-init once to start a tamper-evident audit trail "
-    "of every commit (AI-assisted or not). Shown once per repo; silence with "
-    "TITAN_RECEIPTS_QUIET=1.")
+    "AI Audit Trail: this commit was NOT receipted — receipts aren't set up in "
+    "this repo yet. /ai-history shows how much of this repo Claude already "
+    "co-wrote (no setup). Run /receipt-init once to start a tamper-evident audit "
+    "trail of every commit (AI-assisted or not). Shown once per repo; silence "
+    "with AI_AUDIT_TRAIL_QUIET=1.")
 NOTICE_CLAUDE = (
-    "Titan Receipts is installed but not initialized in this repository, so the "
+    "AI Audit Trail is installed but not initialized in this repository, so the "
     "commit that just succeeded has no receipt. The user has already been shown a "
     "one-time notice naming /receipt-init. Do not run /receipt-init or "
     "`receipt.py init` yourself: it creates a signing key and installs a git hook, "
@@ -581,7 +610,7 @@ def _first_run_notice(root: Path) -> None:
     the plugin's own data dir — never inside the user's repo. If the record
     can't be written, say nothing: an unrecordable notice would repeat on every
     commit, and nagging is worse than silence. Never raises."""
-    if os.environ.get("TITAN_RECEIPTS_QUIET"):
+    if os.environ.get("AI_AUDIT_TRAIL_QUIET") or os.environ.get("TITAN_RECEIPTS_QUIET"):
         return
     try:
         key = hashlib.sha256(str(Path(root).resolve()).encode()).hexdigest()[:32]
@@ -763,7 +792,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     L.append(f"# AI-assisted change receipts — {Path.cwd().name}")
     L.append("")
     L.append(f"Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} "
-             f"by titan-receipts {PLUGIN_VERSION} from `.titan/attestations/`.")
+             f"by ai-audit-trail {PLUGIN_VERSION} from `.titan/attestations/`.")
     L.append("")
     L.append("## Verification")
     L.append("")
@@ -821,10 +850,122 @@ def cmd_report(args: argparse.Namespace) -> int:
              "hook and the git post-commit hook have no receipt and are not counted.")
     text = "\n".join(L) + "\n"
     if getattr(args, "out", None):
-        Path(args.out).write_text(text)
+        Path(args.out).write_text(text, encoding="utf-8")
         print(f"report: {args.out}")
     else:
         sys.stdout.write(text)
+    return 0
+
+
+# --------------------------------------------------------------- history
+def _scan_history(since: str | None) -> list[tuple[str, str, bool, int]]:
+    """(author, month, has_claude_trailer, lines_added) per non-merge commit.
+    Lines under .titan/ are receipt bookkeeping, not work, and are skipped."""
+    cmd = ["log", "--no-merges", "--numstat",
+           "--format=%x1e%H%x1f%an <%ae>%x1f%cI%x1f%B%x1d"]
+    if since:
+        cmd.append(f"--since={since}")
+    out = []
+    for rec in git(*cmd).split("\x1e")[1:]:
+        head, _, stat = rec.partition("\x1d")
+        parts = head.split("\x1f", 3)
+        if len(parts) < 4:
+            continue
+        _sha, author, when, body = parts
+        added = 0
+        for line in stat.splitlines():
+            cols = line.split("\t", 2)
+            if len(cols) == 3 and cols[0].isdigit() and not _is_titan_path(cols[2]):
+                added += int(cols[0])
+        out.append((author, when[:7], ai_trailers(body), added))
+    return out
+
+
+def cmd_history(args: argparse.Namespace) -> int:
+    """How much of this repo did Claude help write — answered from the commit
+    trailers already in git history. Zero setup: reads git, writes nothing,
+    needs no key. Unsigned by nature, and says so; receipts are the signed
+    record from /receipt-init onward."""
+    root = repo_root()
+    if root is None:
+        return die("not inside a git repository")
+    os.chdir(root)
+    try:
+        git("rev-parse", "--verify", "-q", "HEAD")
+    except RuntimeError:
+        print("No commits yet — nothing to scan.")
+        return 0
+    try:
+        rows = _scan_history(getattr(args, "since", None))
+    except RuntimeError as exc:
+        return die(str(exc))
+    if not rows:
+        print("No non-merge commits in range — nothing to scan.")
+        return 0
+
+    n = len(rows)
+    n_ai = sum(1 for r in rows if r[2])
+    lines = sum(r[3] for r in rows)
+    lines_ai = sum(r[3] for r in rows if r[2])
+    initialized = KEY_PATH.exists()
+    if getattr(args, "json", False):
+        print(json.dumps({"repo": Path(root).name, "commits": n, "ai_commits": n_ai,
+                          "lines_added": lines, "ai_lines_added": lines_ai,
+                          "since": getattr(args, "since", None),
+                          "basis": "commit-trailers", "signed": False}, indent=2))
+        return 0
+
+    def pct(a: int, d: int) -> str:
+        return f"{100.0 * a / d:.0f}%" if d else "–"
+
+    def tally(key) -> dict[str, list[int]]:
+        t: dict[str, list[int]] = {}
+        for r in rows:
+            t.setdefault(key(r), [0, 0])
+            t[key(r)][0] += 1
+            t[key(r)][1] += int(r[2])
+        return t
+
+    L = [f"# How much of {Path(root).name} did Claude help write?", "",
+         "Read from the commit trailers already in this repo's git history "
+         "(`Co-Authored-By: Claude …`, `Claude-Session:`). No setup, no key, "
+         "nothing written — and **unsigned**: a starting estimate, not evidence.", "",
+         "| | commits | lines added |", "|---|---|---|",
+         f"| Scanned (non-merge) | {n} | {lines} |",
+         f"| With a Claude trailer | {n_ai} ({pct(n_ai, n)}) | {lines_ai} ({pct(lines_ai, lines)}) |",
+         "", "## By author", "",
+         "| author | commits | with a Claude trailer |", "|---|---|---|"]
+    authors = sorted(tally(lambda r: r[0]).items(), key=lambda kv: -kv[1][0])
+    for k, (c, a) in authors[:15]:
+        L.append(f"| {k} | {c} | {a} ({pct(a, c)}) |")
+    if len(authors) > 15:
+        c = sum(v[0] for _, v in authors[15:])
+        a = sum(v[1] for _, v in authors[15:])
+        L.append(f"| {len(authors) - 15} other authors | {c} | {a} ({pct(a, c)}) |")
+    L += ["", "## By month", "",
+          "| month | commits | with a Claude trailer |", "|---|---|---|"]
+    months = sorted(tally(lambda r: r[1]).items())
+    if len(months) > 12:
+        c = sum(v[0] for _, v in months[:-12])
+        a = sum(v[1] for _, v in months[:-12])
+        L.append(f"| before {months[-12][0]} | {c} | {a} ({pct(a, c)}) |")
+    for k, (c, a) in months[-12:]:
+        L.append(f"| {k} | {c} | {a} ({pct(a, c)}) |")
+    L += ["", "## What this does and doesn't tell you", "",
+          "It counts commits whose message carries a Claude trailer, and the lines "
+          "added in those commits — not which lines Claude typed. Trailers are plain "
+          "text: anyone can add or delete them, and history can be rewritten. Claude-"
+          "assisted commits whose trailer was dropped (or squash-merged without it) "
+          "count as not AI-assisted. A starting estimate, not evidence.", ""]
+    if initialized:
+        L.append("**Signed view:** receipts are on in this repo — `/receipt-report` "
+                 "covers every commit since `/receipt-init` with chain and signature "
+                 "verification.")
+    else:
+        L.append("**Make it evidence from here on:** `/receipt-init` gives every new "
+                 "commit a hash-chained, signed receipt, so a later rewrite of this "
+                 "record shows up in `/verify-chain`.")
+    sys.stdout.write("\n".join(L) + "\n")
     return 0
 
 
@@ -895,6 +1036,14 @@ def _report_anchor() -> None:
 
 
 def main() -> int:
+    # A piped stdout on Windows defaults to the locale codepage (cp1252): '—'
+    # reached Claude Code as invalid UTF-8 and a non-Latin author name raised
+    # UnicodeEncodeError mid-report. Callers (Claude Code, git, CI) read UTF-8.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -913,6 +1062,9 @@ def main() -> int:
     p.set_defaults(fn=cmd_verify)
     p = sub.add_parser("report"); p.add_argument("--out")
     p.set_defaults(fn=cmd_report)
+    p = sub.add_parser("history"); p.add_argument("--since", help="e.g. 2026-01-01 or '6 months ago'")
+    p.add_argument("--json", action="store_true", help="machine-readable summary")
+    p.set_defaults(fn=cmd_history)
     args = ap.parse_args()
     return args.fn(args)
 

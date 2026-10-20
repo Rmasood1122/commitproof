@@ -1,0 +1,4 @@
+# Shell scripts must stay LF on every checkout: with core.autocrlf=true a
+# Windows clone would rewrite core/py.sh to CRLF line endings, and sh fails
+# on the carriage returns.
+*.sh text eol=lf

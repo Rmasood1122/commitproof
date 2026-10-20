@@ -35,7 +35,8 @@ def frontmatter(path: Path) -> dict:
 
 def test_commands_frontmatter_and_no_broad_grants():
     cmds = sorted((ROOT / "commands").glob("*.md"))
-    assert {c.stem for c in cmds} == {"receipt-init", "receipt", "verify-chain", "receipt-report"}
+    assert {c.stem for c in cmds} == {"receipt-init", "receipt", "verify-chain",
+                                      "receipt-report", "ai-history"}
     for c in cmds:
         data = frontmatter(c)
         assert data.get("description"), c

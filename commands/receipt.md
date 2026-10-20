@@ -5,7 +5,7 @@ description: Write a signed, chained receipt for the current commit — file has
 Create a receipt for HEAD:
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" create
+sh "${CLAUDE_PLUGIN_ROOT}/core/py.sh" "${CLAUDE_PLUGIN_ROOT}/core/receipt.py" create
 ```
 
 - One receipt per commit: re-running on the same HEAD is a no-op, not a

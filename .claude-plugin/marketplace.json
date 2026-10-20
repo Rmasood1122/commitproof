@@ -1,15 +1,15 @@
 {
-  "name": "titan-receipts-marketplace",
-  "description": "Know which commits AI wrote, and prove it: tamper-evident, hash-chained receipts for every commit, plus a one-command change-control report.",
+  "name": "ai-audit-trail",
+  "description": "An audit trail for AI-written code: see how much of a repo Claude helped write in seconds, then give every commit a tamper-evident receipt and a one-command change-control report.",
   "owner": {
     "name": "Rehan Masood",
     "url": "https://github.com/Rmasood1122"
   },
   "plugins": [
     {
-      "name": "titan-receipts",
+      "name": "ai-audit-trail",
       "source": "./",
-      "description": "Know which commits AI wrote. A tamper-evident receipt for every commit (AI-assisted or not, model, tool version, session, file hashes), hash-chained, signed, verified offline. Start with /receipt-init."
+      "description": "Know which commits AI wrote, and prove the record wasn't rewritten. Start with /ai-history (no setup), then /receipt-init for signed, hash-chained receipts verified offline."
     }
   ]
 }
