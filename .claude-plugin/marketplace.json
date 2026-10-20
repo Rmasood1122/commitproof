@@ -9,7 +9,7 @@
     {
       "name": "commitproof",
       "source": "./",
-      "description": "Know which commits AI wrote, and prove the record wasn't rewritten. Start with /ai-history (no setup), then /receipt-init for signed, hash-chained receipts verified offline."
+      "description": "Works in Claude Code. Know which commits AI wrote, and prove the record wasn't rewritten. Start with /ai-history (no setup), then /receipt-init for signed, hash-chained receipts verified offline."
     }
   ]
 }
