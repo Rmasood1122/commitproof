@@ -111,3 +111,14 @@ def test_history_badge_is_labelled_unsigned_and_writes_only_the_badge(repo, tmp_
     assert "of commits · unsigned" in text and "verified" not in text
     assert f"]({REPO_URL}" in r.stderr           # snippet stays out of the document
     assert f"]({REPO_URL}" not in r.stdout
+
+
+def test_badge_and_report_create_missing_folders(repo):
+    """The README suggests docs/ai-audit-badge.svg; a repo without docs/
+    crashed with FileNotFoundError."""
+    r = run(repo, "report", "--out", "evidence/report.md", "--badge", "docs/badge.svg")
+    assert r.returncode == 0, r.stderr
+    assert (repo / "evidence" / "report.md").exists() and (repo / "docs" / "badge.svg").exists()
+    r = run(repo, "history", "--badge", "img/hist.svg")
+    assert r.returncode == 0, r.stderr
+    assert (repo / "img" / "hist.svg").exists()

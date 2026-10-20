@@ -851,6 +851,7 @@ def cmd_report(args: argparse.Namespace) -> int:
              "hook and the git post-commit hook have no receipt and are not counted.")
     text = "\n".join(L) + "\n"
     if getattr(args, "out", None):
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         Path(args.out).write_text(text, encoding="utf-8")
         print(f"report: {args.out}")
     else:
@@ -881,8 +882,8 @@ def write_badge(path: str, value: str, color: str, title: str) -> str:
     linking back to this plugin."""
     label = "AI-assisted"
 
-    def width(s: str) -> int:   # Verdana 11px: ~6.6px a glyph; 7 leaves slack
-        return int(len(s) * 7) + 12
+    def width(s: str) -> int:   # Verdana 11px measures ~5.6–6.3px a glyph here
+        return int(len(s) * 6.5) + 10
 
     lw, vw = width(label), width(value)
     e = html.escape
@@ -896,6 +897,7 @@ def write_badge(path: str, value: str, color: str, title: str) -> str:
         f'<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" '
         f'font-size="11"><text x="{lw / 2:.1f}" y="14">{e(label)}</text>'
         f'<text x="{lw + vw / 2:.1f}" y="14">{e(value)}</text></g></svg>\n')
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(svg, encoding="utf-8", newline="\n")
     return (f"badge: {path}\nREADME: [![{label}: {value}]({Path(path).as_posix()})]"
             f"({HOMEPAGE} \"{title}\")")

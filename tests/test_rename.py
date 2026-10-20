@@ -117,3 +117,19 @@ def test_badge_link_is_the_manifest_homepage():
     import receipt
     m = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
     assert receipt.HOMEPAGE == m["homepage"] == REPO_URL
+
+
+def test_readme_install_and_action_pin_match_this_release():
+    """README drifted before (a stale version and test count). Pin what can be pinned."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    version = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())["version"]
+    assert "/plugin marketplace add Rmasood1122/ai-audit-trail" in readme
+    assert "/plugin install ai-audit-trail@ai-audit-trail" in readme
+    assert f"uses: Rmasood1122/ai-audit-trail@v{version}" in readme
+
+
+def test_readme_links_to_files_that_exist():
+    import re
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for target in re.findall(r"\]\(((?:docs/|PRIVACY)[^)\s]+)\)", readme):
+        assert (ROOT / target).exists(), target

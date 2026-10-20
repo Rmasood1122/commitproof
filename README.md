@@ -1,80 +1,109 @@
-# Titan Receipts
+# AI Audit Trail
 
-[![CI](https://github.com/Rmasood1122/titan-gate-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Rmasood1122/titan-gate-plugin/actions/workflows/ci.yml)
+[![CI](https://github.com/Rmasood1122/ai-audit-trail/actions/workflows/ci.yml/badge.svg)](https://github.com/Rmasood1122/ai-audit-trail/actions/workflows/ci.yml)
 
-**An audit trail for AI-written code.** Every commit gets a tamper-evident
-receipt — AI-assisted or not, which model, which Claude Code version, which
-session, the file and diff hashes — hash-chained to the previous one,
-HMAC-signed, and verifiable offline. One command turns the chain into the
-compliance report your auditor asks for.
+**Know which commits AI wrote, and prove the record wasn't rewritten.**
 
-When someone asks *"which of these commits did the AI write, under what
-tool, and can you prove this record hasn't been rewritten since?"*, most
-teams have a process document. This gives you receipts.
+Teams using Claude Code get asked two questions:
 
-```jsonc
-// .titan/attestations/2026-10-03/74c11c58-….json  (abridged)
-{
-  "commit": { "sha": "629fca04…", "branch": "main", "subject": "feat: add handler",
-              "author": "Dev <dev@example.com>", "committed_at": "2026-10-03T07:32:14-04:00" },
-  "files": [ { "path": "app.py", "status": "M", "sha256": "bc16d440…" } ],
-  "diff_sha256": "e95b93b0…",
-  "provenance": {
-    "ai_assisted": true,
-    "basis": ["commit-trailers", "claude-code-hook"],
-    "recorder": "claude-code-hook", "recorder_version": "1.2.0",
-    "session_id": "7f3a…", "models": ["claude-sonnet-4-6"], "claude_code_version": "2.1.288",
-    "transcript": { "lines": 412, "content_sha256": "2ef9732e…" }
-  },
-  "prev_receipt_hash": "GENESIS",
-  "receipt_hash": "b9f069af…",
-  "signature": "80265ea9…"
-}
-```
+1. **"How much of this did the AI write?"** `/ai-history` answers in seconds
+   from the git history you already have. No setup, no key, writes nothing.
+2. **"Can you prove that record hasn't been edited since?"** `/receipt-init`
+   gives every commit from then on a tamper-evident receipt: hash-chained,
+   signed, verifiable offline. `/receipt-report` turns the chain into the
+   change-control evidence a SOC 2, HIPAA or PCI auditor asks for.
 
-## Install
-
-Requires [Claude Code](https://claude.com/claude-code), Python 3.10+, and git.
-Nothing else — stdlib only, no packages, no network, no service, nothing
-phones home.
+## Try it in 30 seconds
 
 ```
-/plugin marketplace add Rmasood1122/titan-gate-plugin
-/plugin install titan-receipts@titan-receipts-marketplace
+/plugin marketplace add Rmasood1122/ai-audit-trail
+/plugin install ai-audit-trail@ai-audit-trail
 ```
 
-Or from your shell: `claude plugin marketplace add Rmasood1122/titan-gate-plugin &&
-claude plugin install titan-receipts@titan-receipts-marketplace`. Confirm with
-`/plugin list`; if `/receipt-init` isn't recognized, start a fresh session.
+Then, in any repository:
 
-## First run
+```
+/ai-history
+```
+
+```markdown
+| | commits | lines added |
+|---|---|---|
+| Scanned (non-merge) | 7 | 749 |
+| With a Claude trailer | 4 (57%) | 605 (81%) |
+
+## By author
+
+| author | commits | with a Claude trailer |
+|---|---|---|
+| Dana Lee <dana@example.com> | 3 | 0 (0%) |
+| Priya Nair <priya@example.com> | 2 | 2 (100%) |
+| Sam Ortiz <sam@example.com> | 2 | 2 (100%) |
+```
+
+([full sample](docs/sample-ai-history.md), from a demo repo.) It reads the
+`Co-Authored-By: Claude …` and `Claude-Session:` trailers Claude Code already
+puts on commits, so it labels itself **unsigned**: a starting estimate, not
+evidence. Trailers are plain text and history can be rewritten. That gap is
+what receipts close.
+
+## Make it evidence
 
 Open Claude Code **inside the repository you want receipts for**:
 
 ```
 /receipt-init                    # one-time: signing key (gitignored), vendored verifier, git post-commit hook
-git commit -m "…"                # every commit from now on is receipted — human or AI
+git commit -m "…"                # every commit from now on is receipted, human or AI
 /verify-chain                    # walks the chain offline; exit 0 means intact
-/receipt-report                  # markdown evidence: AI-assisted share, by author/month, tooling, verification
+/receipt-report --badge docs/ai-audit-badge.svg
 ```
 
-Until you run `/receipt-init`, the plugin receipts nothing. The first time
-Claude commits in a repo that isn't set up, you get a one-line notice saying
-so — once per repo, never again, and it never sets anything up for you.
-Set `TITAN_RECEIPTS_QUIET=1` to turn the notice off.
+`/receipt-report` writes the evidence document: verification result first,
+then AI-assisted share by author, month and recorder, and the models and
+Claude Code versions recorded. **[See a sample report](docs/sample-report.md).**
 
-Receipts land in `.titan/attestations/`, the verifier in `.titan/tools/`.
-Commit both; the key never. Git hooks aren't cloned, so each teammate runs
-`python3 .titan/tools/receipt.py install-hook` once per clone.
+Each receipt is one small JSON file in `.titan/attestations/`:
+
+```jsonc
+{
+  "commit": { "sha": "629fca04…", "subject": "feat: add handler",
+              "author": "Dev <dev@example.com>", "committed_at": "2026-10-03T07:32:14-04:00" },
+  "files": [ { "path": "app.py", "status": "M", "sha256": "bc16d440…" } ],
+  "diff_sha256": "e95b93b0…",
+  "provenance": { "ai_assisted": true, "basis": ["commit-trailers", "claude-code-hook"],
+                  "models": ["claude-opus-5-5"], "claude_code_version": "2.1.299",
+                  "session_id": "7f3a…", "transcript": { "lines": 412, "content_sha256": "2ef9732e…" } },
+  "prev_receipt_hash": "b9f069af…",
+  "receipt_hash": "c41d0e7b…",
+  "signature": "80265ea9…"
+}
+```
+
+Edit any recorded field (flip one `ai_assisted` flag) or delete a receipt from
+the middle of the chain, and `/verify-chain` fails and names the receipt.
+
+## Put it on your README
+
+`--badge` writes a self-contained SVG (no badge service, nothing phones home)
+and prints the README line:
+
+![AI-assisted: 50% · chain verified](docs/badge-verified.svg) &nbsp;
+![AI-assisted: 54% of commits · unsigned](docs/badge-unsigned.svg)
+
+The badge can't say more than the check behind it. It says **chain verified**
+only when the chain is intact and every signature checks out, **structure
+only** without the key, **verification FAILED** with no percentage if anything
+was altered, and **unsigned** when it comes from `/ai-history`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/receipt-init` | Generates the signing key (gitignored — init refuses if git tracks it), vendors the verifier into `.titan/tools/`, installs a git `post-commit` hook. `--no-git-hook` to skip the hook. |
+| `/ai-history` | Share of commits and lines added with a Claude trailer, by author and month, from git history. No setup, writes nothing, unsigned. `--since`, `--json`, `--badge`. |
+| `/receipt-init` | Generates the signing key (gitignored; init refuses if git tracks it), vendors the verifier into `.titan/tools/`, installs a git `post-commit` hook. `--no-git-hook` to skip the hook. |
 | `/receipt` | Writes a signed, chained receipt for HEAD by hand. One per commit; re-runs are no-ops. |
-| `/verify-chain` | Walks the whole chain offline: structure + every signature. Any tamper = exit 1 naming the receipt. `--structure-only` checks chain and content hashes without the key and says signatures were not checked. Ends with an `ANCHOR` line: how many receipts are committed **and pushed**. |
-| `/receipt-report` | Markdown report: receipted commits, AI-assisted share, by recorder / author / month, models and Claude Code versions recorded, chain verification result, and the limits footer. |
+| `/verify-chain` | Walks the whole chain offline: structure and every signature. Any tamper exits 1 and names the receipt. `--structure-only` checks without the key and says signatures were not checked. Ends with an `ANCHOR` line: how many receipts are committed **and pushed**. |
+| `/receipt-report` | Markdown evidence: verification result, AI-assisted share by recorder / author / month, models and Claude Code versions recorded, and the limits footer. `--out`, `--badge`. |
 
 ## Two hooks, full coverage
 
@@ -83,87 +112,98 @@ Commit both; the key never. Git hooks aren't cloned, so each teammate runs
 | in a Claude Code session | plugin `PostToolUse` hook | `true` (basis: `claude-code-hook`, plus trailers if present) | session id, model(s), Claude Code version, transcript hash, tool-use id |
 | from your own terminal | git `post-commit` hook (defers inside Claude Code) | from `Co-Authored-By`/`Claude-Session` trailers; otherwise `false` | author, timestamp |
 
-Neither hook can break a commit: an uninitialized repo is a silent no-op,
-and the git hook always exits 0. Commits made with neither hook installed
-have no receipt — the report says so rather than counting them as human.
+Neither hook can break a commit: an uninitialized repo is a silent no-op
+(plus a one-time notice naming `/receipt-init`; `AI_AUDIT_TRAIL_QUIET=1`
+turns it off), and the git hook always exits 0. Commit `.titan/attestations/`
+and `.titan/tools/`, never `.titan/key`. Git hooks aren't cloned, so each
+teammate runs `python3 .titan/tools/receipt.py install-hook` once per clone
+(`python` or `py` on Windows).
+
+## How it fits with git-ai
+
+[git-ai](https://github.com/git-ai-project/git-ai) does line-level AI blame
+across many coding agents. Use it for that. AI Audit Trail answers the
+question an auditor asks next: can you prove this record wasn't edited after
+the fact? It does that with hash-chained, signed receipts you verify offline,
+and a report built as change-control evidence. The two work side by side.
 
 ## Verify in CI
 
 ```yaml
-- uses: Rmasood1122/titan-gate-plugin@v1.2.0
+- uses: Rmasood1122/ai-audit-trail@v1.3.0
   with:
     key: ${{ secrets.TITAN_KEY }}       # omit for structure-only verification
     report: docs/ai-change-receipts.md  # optional
 ```
 
 Without the key the action verifies chain structure and content hashes and
-states plainly that signatures were not checked. The key is written only for
-the step and removed after.
+says plainly that signatures were not checked. The key is written only for
+the step and removed after. The action verifies with **its own pinned
+verifier**, never the `.titan/tools/receipt.py` in the repo under audit: the
+party who could alter the receipts also controls that copy. Pin a ref you
+trust. `allow_repo_verifier: true` runs the repo's copy for the rare
+compatibility case and warns that the result is self-reported.
 
-The action verifies with **its own pinned verifier** (the one at the ref you
-pin `uses:` to), never the `.titan/tools/receipt.py` committed in the repo
-under audit. That is the point: the party who could alter the receipts also
-controls the vendored verifier, so letting it verify itself proves nothing.
-Pin a ref you trust. The escape hatch `allow_repo_verifier: true` runs the
-repo's own verifier for the rare canonicalization-compatibility case — it
-emits a warning that the check is no longer independent, and you should treat
-the result as self-reported.
-
-## What a receipt proves — exactly, no more
+## What a receipt proves
 
 **Proves:** the recorded content (file hashes, diff hash, author, provenance
-claims) is unchanged since signing, and the receipts form one unbroken
-ordered chain — under a key your team controls. Flip a single
-`ai_assisted` flag and verification fails on that receipt.
+claims) is unchanged since signing, and the receipts form one unbroken ordered
+chain, under a key your team controls.
 
 <details>
-<summary><strong>Does not prove</strong> — read before writing a compliance claim</summary>
+<summary><strong>Does not prove</strong>: read before writing a compliance claim</summary>
 
-- **Who held the key.** HMAC is a shared secret; anyone with `.titan/key`
-  can produce valid signatures. Asymmetric signing and external timestamp
-  anchoring are features of the upstream
-  [titan-gate](https://github.com/Rmasood1122/titan-gate) engine, not this
-  plugin.
+- **Who held the key.** HMAC is a shared secret; anyone with `.titan/key` can
+  produce valid signatures. Asymmetric signing and external timestamping live
+  in the upstream [titan-gate](https://github.com/Rmasood1122/titan-gate) engine.
 - **That anyone reviewed the change**, or that it was good.
 - **That provenance is true.** `ai_assisted`, model, version, session and
-  transcript hash are **recorded claims**: trailers copied from the commit
-  message, and what the Claude Code hook observed on the machine that made
-  the commit. The chain proves they weren't edited afterwards, not that they
-  were accurate when written.
+  transcript hash are recorded claims: trailers from the commit message and
+  what the Claude Code hook observed locally. The chain proves they weren't
+  edited afterwards, not that they were accurate when written.
 - **Anything about un-receipted commits.** Coverage is as good as hook
-  installation.
-- **Ordering to anyone but you** until `.titan/attestations/` is committed
-  and pushed. Because that distribution is the only defence against someone
-  who holds the key, `/verify-chain` measures it: its closing `ANCHOR` line
-  reports how many receipts are untracked, uncommitted, or
-  committed-but-not-pushed. A chain that verifies but sits only on one
-  machine is a claim, not evidence — every pushed clone then holds an
-  independent copy that tampering would have to chase down.
+  installation; the report counts only receipted commits.
+- **Ordering to anyone but you** until `.titan/attestations/` is committed and
+  pushed. Every pushed clone then holds an independent copy a rewrite would
+  have to chase down, and `/verify-chain` reports how much is pushed.
 
-### Verifying a clone that has no key
-
-The key is gitignored and never travels with the repo, so a reviewer's fresh
-clone has the receipts but not `.titan/key`. `/verify-chain` still runs the
-full structural walk there — one unbroken chain from GENESIS, every stored
-`receipt_hash` recomputed from content — and reports that result, then says
-plainly `SIGNATURES NOT CHECKED` and exits 2. Structure proves the files are
-internally consistent; only the key proves they were signed under it. Share
-the key out-of-band with whoever needs to verify signatures.
-
+A fresh clone has the receipts but not the gitignored key: `/verify-chain`
+still runs the full structural walk there, then says `SIGNATURES NOT CHECKED`
+and exits 2. Share the key out-of-band with whoever must verify signatures.
 The bundled `receipt-integrity` skill keeps compliance language inside these
 lines, because a receipt system that overclaims is worse than none.
 </details>
 
+## Requirements and privacy
+
+Claude Code, git, and Python 3.10+ on PATH as `python3`, `python` or `py`.
+Stdlib only: no packages, no network, no service, nothing phones home
+([PRIVACY.md](PRIVACY.md)). CI runs the full suite, every tamper path
+included, on Ubuntu and Windows.
+
+## Formerly Titan Receipts
+
+Same tool, new name (1.3.0). To switch an existing install:
+
+```
+/plugin uninstall titan-receipts@titan-receipts-marketplace
+/plugin marketplace remove titan-receipts-marketplace
+/plugin marketplace add Rmasood1122/ai-audit-trail
+/plugin install ai-audit-trail@ai-audit-trail
+```
+
+Existing `.titan/` chains keep verifying unchanged. Re-run
+`python3 .titan/tools/receipt.py install-hook` in each clone to pick up the
+updated git hook. `TITAN_RECEIPTS_QUIET` still works.
+
 ## Provenance
 
 The canonicalization and chain-walk rules are vendored byte-compatible from
-[titan-gate](https://github.com/Rmasood1122/titan-gate) (849 tests), whose
-TRS receipt engine adds Ed25519 signing, RFC-3161 timestamping, Merkle
-roots, and a scoring judge. This plugin is the lightweight attestation
-profile of that system: `change-attestation/v1`, its own verifier, its own
-tree. Suite: 53 tests, every tamper path seen failing. Related:
-[eval-conductor](https://github.com/Rmasood1122/eval-conductor) — fail-closed
-eval release gates by the same author.
+[titan-gate](https://github.com/Rmasood1122/titan-gate), whose receipt engine
+adds Ed25519 signing, RFC-3161 timestamping and Merkle roots. This plugin is
+its lightweight attestation profile, `change-attestation/v1`. Related:
+[eval-conductor](https://github.com/Rmasood1122/eval-conductor) and
+[proof-gate](https://github.com/Rmasood1122/proof-gate) by the same author.
 
 ## License
 
