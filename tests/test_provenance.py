@@ -53,7 +53,7 @@ def repo(tmp_path):
 def test_init_vendors_tools_and_installs_git_hook(repo):
     r = run(["init"], repo)
     assert r.returncode == 0, r.stderr
-    for f in ("receipt.py", "canonical.py", "chain_state.py"):
+    for f in ("receipt.py", "canonical.py", "chain_state.py", "signing.py"):
         assert (repo / ".titan/tools" / f).read_bytes() == (PLUGIN / "core" / f).read_bytes()
     hook = repo / ".git/hooks/post-commit"
     assert hook.exists() and os.access(hook, os.X_OK)

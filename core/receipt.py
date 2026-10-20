@@ -4,7 +4,10 @@
 Profile: schema_version "change-attestation/v1"
   - Canonicalization: TRS-1 sorted-keys (vendored canonical.py, byte-
     compatible with titan-gate's), exclusions {signature, receipt_hash, ...}.
-  - Signing: hmac-sha256-v1 over sha256(canonical_bytes).
+  - Signing: hmac-sha256-v1 (shared .titan/key) or ssh-sig-v1 (the committer's
+    SSH key, checked against .titan/allowed_signers), over the receipt
+    hash; see signing.py. Chains may mix them; each receipt is checked by
+    its own signing_version.
   - Chain: vendored chain_state rules — single GENESIS, forks/dangling
     prevs/tampered hashes are hard errors, never guesses.
   - Tree: .titan/attestations/ (its OWN tree; never mixed with a judge-
@@ -80,6 +83,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import signing                                 # noqa: E402
 from badge import BADGE_BLUE, BADGE_GREY, BADGE_RED, write_badge   # noqa: E402
 from canonical import canonical_bytes           # noqa: E402
 from chain_state import (                       # noqa: E402
@@ -87,11 +91,13 @@ from chain_state import (                       # noqa: E402
 )
 
 SCHEMA = "change-attestation/v1"
-SIGNING = "hmac-sha256-v1"
-PLUGIN_VERSION = "1.3.1"          # kept equal to .claude-plugin/plugin.json (tested)
+PLUGIN_VERSION = "1.4.0"          # kept equal to .claude-plugin/plugin.json (tested)
 KEY_PATH = Path(".titan/key")
+ALLOWED_SIGNERS = Path(".titan/allowed_signers")   # committed: who may SSH-sign
 TREE = Path(".titan/attestations")
 TOOLS_DIR = Path(".titan/tools")
+# per-clone (local git config, never committed): this developer's SSH key
+CFG_SSH_KEY, CFG_PRINCIPAL = "commitproof.signingkey", "commitproof.principal"
 HOOK_MARK = "# commitproof post-commit hook"
 LEGACY_HOOK_MARKS = ("# titan-receipts post-commit hook",)   # v1.0–1.2, still ours
 AI_TRAILER_RE = re.compile(r"claude|anthropic", re.I)
@@ -127,6 +133,25 @@ def git(*args: str) -> str:
     if r.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)}: {r.stderr.strip()}")
     return r.stdout
+
+
+def git_config(key: str) -> str | None:
+    try:
+        return git("config", "--get", key).strip() or None
+    except RuntimeError:
+        return None    # unset
+
+
+def local_signer() -> tuple[str, Path | None, str | None] | None:
+    """How THIS clone signs: ("ssh", key, principal), ("hmac", None, None),
+    or None when it can't sign. SSH wins when both are set up: a repo that
+    moved to SSH keeps its HMAC key only so earlier receipts still verify."""
+    key = git_config(CFG_SSH_KEY)
+    if key:
+        return "ssh", Path(key), git_config(CFG_PRINCIPAL) or git_config("user.email")
+    if KEY_PATH.exists():
+        return "hmac", None, None
+    return None
 
 
 def repo_root() -> Path | None:
@@ -216,6 +241,9 @@ def cmd_init(args: argparse.Namespace) -> int:
     if root is None:
         return die("not inside a git repository")
     os.chdir(root)
+    use_ssh = getattr(args, "ssh", None) is not None or ALLOWED_SIGNERS.exists()
+    if use_ssh:
+        return _init_ssh(args, Path(root))
     if KEY_PATH.exists() and not args.force:
         print(f"key exists: {KEY_PATH} (use --force to rotate — old receipts "
               f"then verify only with the OLD key; keep it somewhere safe)")
@@ -230,13 +258,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         KEY_PATH.chmod(0o600)
     except OSError:
         pass  # windows
-    gi = Path(".gitignore")
-    text = gi.read_text() if gi.exists() else ""
-    for line in (".titan/key", ".titan/tools/__pycache__/"):
-        if line not in text.splitlines():
-            text = (text.rstrip("\n") + "\n" if text else "") + line + "\n"
-            gi.write_text(text)
-            print(f"gitignore: added {line}")
+    _ensure_gitignore()
     # fail-closed: a tracked key is a published key
     tracked = subprocess.run(["git", "ls-files", "--error-unmatch", str(KEY_PATH)],
                              capture_output=True)
@@ -251,6 +273,71 @@ def cmd_init(args: argparse.Namespace) -> int:
             print(f"vendored: {w}")
         print(install_git_hook(Path(root)))
     return 0
+
+
+def _resolve_ssh_key(explicit: str) -> Path:
+    """--ssh KEY, else git's own SSH signing key (gpg.format=ssh), else the
+    usual ~/.ssh keys. Literal `key::` signing keys aren't paths: pass one."""
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    if git_config("gpg.format") == "ssh":
+        sk = git_config("user.signingkey")
+        if sk and not sk.startswith(("key::", "ssh-", "ecdsa-", "sk-")):
+            return Path(sk).expanduser()
+    for name in ("id_ed25519", "id_ecdsa", "id_rsa"):
+        for p in (Path.home() / ".ssh" / name, Path.home() / ".ssh" / f"{name}.pub"):
+            if p.is_file():
+                return p
+    raise signing.SigningError("no SSH key found — pass one: /receipt-init --ssh PATH")
+
+
+def _init_ssh(args: argparse.Namespace, root: Path) -> int:
+    """Register this developer's SSH key in .titan/allowed_signers and sign
+    from now on with it. Nothing secret is created, and nothing is written
+    until a probe signature succeeds without a terminal — the same way the
+    hooks will sign."""
+    principal = git_config("user.email")
+    if not principal:
+        return die("set git user.email first — it names you in .titan/allowed_signers")
+    try:
+        key = _resolve_ssh_key(getattr(args, "ssh", None) or "")
+        pub = signing.public_key(key)
+        fp = signing.fingerprint(pub)
+        signing.ssh_sign(key, b"commitproof init probe")
+    except signing.SigningError as exc:
+        return die(f"SSH key not usable for receipts: {exc}. A key with a passphrase "
+                   f"must be loaded in ssh-agent (ssh-add), because hooks can't prompt.")
+    entry = f'{principal} namespaces="{signing.NAMESPACE}" {pub}'
+    lines = ALLOWED_SIGNERS.read_text(encoding="utf-8").splitlines() if ALLOWED_SIGNERS.exists() else []
+    if any(ln.split()[:1] == [principal] and pub in ln for ln in lines):
+        print(f"allowed_signers: already lists {principal} ({fp})")
+    else:
+        ALLOWED_SIGNERS.parent.mkdir(parents=True, exist_ok=True)
+        ALLOWED_SIGNERS.write_text("\n".join([*lines, entry]) + "\n", encoding="utf-8", newline="\n")
+        print(f"allowed_signers: added {principal} ({fp})")
+    git("config", "--local", CFG_SSH_KEY, str(key))
+    git("config", "--local", CFG_PRINCIPAL, principal)
+    print(f"signing key: {key} (this clone's git config, never committed)")
+    _ensure_gitignore()
+    if KEY_PATH.exists():
+        print(f"{KEY_PATH} kept: earlier HMAC receipts still verify with it")
+    if not getattr(args, "no_git_hook", False):
+        for w in vendor_tools(root):
+            print(f"vendored: {w}")
+        print(install_git_hook(root))
+    print(f"Commit {ALLOWED_SIGNERS.as_posix()} with the receipts. There is no secret to share: "
+          f"anyone can verify, and each teammate runs /receipt-init --ssh in their own clone.")
+    return 0
+
+
+def _ensure_gitignore() -> None:
+    gi = Path(".gitignore")
+    text = gi.read_text() if gi.exists() else ""
+    for line in (".titan/key", ".titan/tools/__pycache__/"):
+        if line not in text.splitlines():
+            text = (text.rstrip("\n") + "\n" if text else "") + line + "\n"
+            gi.write_text(text)
+            print(f"gitignore: added {line}")
 
 
 # ---------------------------------------------------------- git hook
@@ -280,7 +367,7 @@ def vendor_tools(root: Path) -> list[str]:
     src_dir = Path(__file__).resolve().parent
     (root / TOOLS_DIR).mkdir(parents=True, exist_ok=True)
     written = []
-    for name in ("receipt.py", "badge.py", "canonical.py", "chain_state.py"):
+    for name in ("receipt.py", "badge.py", "canonical.py", "chain_state.py", "signing.py"):
         src = src_dir / name
         if not src.exists():
             continue
@@ -473,14 +560,27 @@ def cmd_create(args: argparse.Namespace) -> int:
     if root is None:
         return 0 if args.auto else die("not inside a git repository")
     os.chdir(root)
-    if not KEY_PATH.exists():
+    signer = local_signer()
+    if signer is None:
         if args.auto:
             return 0  # hook mode: repo not initialized — silently do nothing
-        return die("no .titan/key — run receipt.py init first")
-    key = load_key()
-    if key is None:
-        return 1  # a corrupt key is a loud failure even in --auto (|| true
-                  # protects the commit; silence would hide a broken setup)
+        return die("no signing set up in this clone — run receipt.py init first (or init --ssh)")
+    key = None
+    if signer[0] == "hmac" and ALLOWED_SIGNERS.exists():
+        # verify treats HMAC after the move to SSH as a downgrade; don't write one
+        try:
+            head = git("rev-parse", "HEAD").strip()
+        except RuntimeError:
+            head = "(none yet)"
+        return _signing_failed(args, head,
+                               f"this repo signs receipts with SSH ({ALLOWED_SIGNERS.as_posix()}) "
+                               f"and this clone has only the old HMAC key; run "
+                               f"/receipt-init --ssh here")
+    if signer[0] == "hmac":
+        key = load_key()
+        if key is None:
+            return 1  # a corrupt key is a loud failure even in --auto (|| true
+                      # protects the commit; silence would hide a broken setup)
 
     try:
         sha = git("rev-parse", "HEAD").strip()
@@ -523,7 +623,7 @@ def cmd_create(args: argparse.Namespace) -> int:
     now = datetime.now(timezone.utc)
     receipt: dict = {
         "schema_version": SCHEMA,
-        "signing_version": SIGNING,
+        "signing_version": signing.SSH_V1 if signer[0] == "ssh" else signing.HMAC_V1,
         "receipt_id": str(uuid.uuid4()),
         "evaluated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "root_date": now.strftime("%Y-%m-%d"),
@@ -538,9 +638,17 @@ def cmd_create(args: argparse.Namespace) -> int:
                                   getattr(args, "hook_payload", None)),
         "prev_receipt_hash": prev,
     }
-    receipt["receipt_hash"] = hashlib.sha256(canonical_bytes(receipt)).hexdigest()
-    receipt["signature"] = hmac.new(
-        key, receipt["receipt_hash"].encode(), hashlib.sha256).hexdigest()
+    try:
+        if signer[0] == "ssh":
+            # who signed is part of the hashed content: swapping it breaks the chain
+            receipt["signer"] = {"principal": signer[2] or "",
+                                 "key": signing.fingerprint(signing.public_key(signer[1]))}
+        receipt["receipt_hash"] = hashlib.sha256(canonical_bytes(receipt)).hexdigest()
+        message = receipt["receipt_hash"].encode()
+        receipt["signature"] = (signing.ssh_sign(signer[1], message) if signer[0] == "ssh"
+                                else signing.hmac_sign(key, message))
+    except signing.SigningError as exc:
+        return _signing_failed(args, sha, str(exc))
 
     out = TREE / receipt["root_date"] / f"{receipt['receipt_id']}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -549,6 +657,22 @@ def cmd_create(args: argparse.Namespace) -> int:
     print(f"receipt: {out}  commit {sha[:12]}  {ai}  prev "
           f"{prev[:12] if prev != GENESIS else GENESIS}")
     return 0
+
+
+def _signing_failed(args: argparse.Namespace, sha: str, why: str) -> int:
+    """No receipt is better than an unsigned one, but a missing receipt must
+    never be silent. In the Claude Code hook, stderr on exit 0 reaches nobody,
+    so tell the user with a systemMessage; elsewhere, fail loudly."""
+    text = (f"CommitProof: couldn't sign the receipt for commit {sha[:12]}, so it has "
+            f"no receipt. {why}. If your SSH key has a passphrase, load it with "
+            f"`ssh-add`; /receipt-init --ssh re-checks the setup.")
+    if getattr(args, "hook_payload", None) is not None:
+        print(json.dumps({"systemMessage": text, "hookSpecificOutput": {
+            "hookEventName": "PostToolUse",
+            "additionalContext": text + " Tell the user once; don't retry or work "
+                                        "around it — signing is their key's decision."}}))
+        return 0
+    return die(text, 1)
 
 
 # ---------------------------------------------------------------- hook
@@ -580,7 +704,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
     if not _commit_succeeded(payload):
         return 0
     root = repo_root()
-    if root is not None and not (root / KEY_PATH).exists():
+    if root is not None and not (root / KEY_PATH).exists() and not git_config(CFG_SSH_KEY):
         _first_run_notice(root)   # uninitialized: tell the user once, then stay silent
         return 0
     args.auto = True
@@ -686,38 +810,120 @@ def cmd_verify(args: argparse.Namespace) -> int:
         _report_anchor()
         return 0
 
-    if not KEY_PATH.exists():
+    public_only = getattr(args, "public_only", False)
+    if KEY_PATH.exists() and not public_only and load_key() is None:
+        return 2   # corrupt key: load_key printed why
+    rows = check_signatures([(p, json.loads(p.read_text())) for p in sorted(TREE.rglob("*.json"))],
+                            _allowed_signers(args), use_hmac=not public_only)
+    bad = [row for row in rows if row[2] == "invalid"]
+    for p, _r, _s, detail in bad:
+        print(f"SIG FAIL: {p} ({detail})", file=sys.stderr)
+    if bad:
+        print(f"VERDICT: FAIL — {len(bad)}/{n} bad signatures", file=sys.stderr)
+        return 1
+    s = summarize(rows)
+    if s["ssh_ok"]:
+        print(f"SSH signatures: {sum(s['ssh_ok'].values())} valid against "
+              f"{_allowed_signers(args).as_posix()} — signed by "
+              + ", ".join(f"{who} ({c})" for who, c in sorted(s["ssh_ok"].items())))
+    if s["hmac_ok"]:
+        print(f"HMAC signatures: {s['hmac_ok']} valid under {KEY_PATH.as_posix()} "
+              f"(a shared secret: these don't identify who signed)")
+    if s["ssh_unchecked"]:
+        print(f"SSH SIGNATURES NOT CHECKED: {len(s['ssh_unchecked'])} receipt(s) — "
+              f"{s['ssh_unchecked'][0][3]}", file=sys.stderr)
+    pinned = bool(getattr(args, "allowed_signers", None))
+    if s["hmac_unchecked"] and public_only and pinned:
+        # a pinned signer list is a policy: every receipt must be checkable
+        print(f"NOT CHECKED: {len(s['hmac_unchecked'])} HMAC signature(s), and with a pinned "
+              f"--allowed-signers a receipt that can't be checked fails. Provide the HMAC "
+              f"key, or verify without pinning.", file=sys.stderr)
+        _report_anchor()
+        return 2
+    if s["hmac_unchecked"] and public_only:
+        print(f"NOT CHECKED: {len(s['hmac_unchecked'])} HMAC signature(s) — they need the "
+              f"shared {KEY_PATH.as_posix()}, which --public-only doesn't use")
+    elif s["hmac_unchecked"]:
         # F-T3: no key, and structure-only was not requested (e.g. a fresh
         # clone) — say exactly what was and wasn't checked, then fail closed.
         # Structure alone is useful information, not a PASS.
         print(f"chain structure OK: {n} receipt(s), one unbroken line from "
               f"GENESIS, every stored receipt_hash matches its content, head {head[:12]}…")
-        print("SIGNATURES NOT CHECKED: no .titan/key in this checkout (it is "
-              "gitignored by design). Structure alone proves the files are "
-              "internally consistent, not that they were signed under the "
-              "team's key. Obtain the key out-of-band to verify signatures.",
+        print(f"SIGNATURES NOT CHECKED: {len(s['hmac_unchecked'])} HMAC receipt(s) and no "
+              f".titan/key in this checkout (it is gitignored by design). Structure alone "
+              f"proves the files are internally consistent, not that they were signed under "
+              f"the team's key. Obtain the key out-of-band to verify signatures.",
               file=sys.stderr)
+    if s["ssh_unchecked"] or (s["hmac_unchecked"] and not public_only):
         _report_anchor()
         return 2
-    key = load_key()
-    if key is None:
-        return 2
-
-    bad = 0
-    for p in sorted(TREE.rglob("*.json")):
-        r = json.loads(p.read_text())
-        want = hmac.new(key, r["receipt_hash"].encode(), hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(want, r.get("signature", "")):
-            print(f"SIG FAIL: {p}", file=sys.stderr)
-            bad += 1
-    if bad:
-        print(f"VERDICT: FAIL — {bad}/{n} bad signatures", file=sys.stderr)
-        return 1
-    print(f"chain OK: {n} receipt(s), head {head[:12]}…")
-    print("PASS means: contents unchanged since signing, under this shared "
-          "key. It does not identify the signer.")
+    print(f"chain OK{' (public signatures only)' if s['hmac_unchecked'] else ''}: "
+          f"{n} receipt(s), head {head[:12]}…")
+    if s["ssh_ok"]:
+        print(f"PASS means: contents unchanged since signing, and each SSH signature "
+              f"was made by the key {ALLOWED_SIGNERS.as_posix()} lists for its signer.")
+    if s["hmac_ok"]:
+        print("PASS means: contents unchanged since signing, under this shared "
+              "key. It does not identify the signer.")
     _report_anchor()
     return 0
+
+
+def _allowed_signers(args: argparse.Namespace) -> Path:
+    """--allowed-signers lets a verifier (CI) pin who may sign instead of
+    trusting the file in the repo under audit."""
+    given = getattr(args, "allowed_signers", None)
+    return Path(given) if given else ALLOWED_SIGNERS
+
+
+def check_signatures(rows: list[tuple[Path, dict]], allowed: Path,
+                     use_hmac: bool = True) -> list[tuple[Path, dict, str, str]]:
+    """One verdict per receipt: (path, receipt, valid|invalid|unchecked, detail)."""
+    hmac_key = load_key() if use_hmac and KEY_PATH.exists() else None
+    needs_ssh = any(r.get("signing_version") == signing.SSH_V1 for _, r in rows)
+    with signing.SshVerifier(allowed if needs_ssh else None) as ssh:
+        out = [(p, r, *signing.check(r, hmac_key, ssh)) for p, r in rows]
+    # No downgrade: once the chain moved to SSH, a later HMAC receipt is how
+    # someone without a registered key would slip past --public-only (HMAC is
+    # skipped there). Order comes from the chain's own prev links, which a
+    # forger can't reorder without breaking later SSH signatures.
+    seen_ssh = False
+    rank = {id(r): i for i, r in enumerate(chain_order([r for _, r in rows]))}
+    for i in sorted(range(len(out)), key=lambda i: rank.get(id(out[i][1]), len(out))):
+        p, r, st, detail = out[i]
+        if r.get("signing_version") == signing.SSH_V1:
+            seen_ssh = True
+        elif seen_ssh:
+            out[i] = (p, r, "invalid", "HMAC receipt after the chain moved to SSH: "
+                                       "signature downgrade")
+    return out
+
+
+def chain_order(rs: list[dict]) -> list[dict]:
+    """Receipts from GENESIS forward by their prev links. A broken chain (it
+    already fails structure) yields what is reachable, then the rest."""
+    by_prev = {r.get("prev_receipt_hash"): r for r in rs}
+    ordered, cur, seen = [], GENESIS, set()
+    while cur in by_prev and cur not in seen:
+        seen.add(cur)
+        nxt = by_prev[cur]
+        ordered.append(nxt)
+        cur = nxt.get("receipt_hash")
+    return ordered + [r for r in rs if all(r is not o for o in ordered)]
+
+
+def summarize(rows: list[tuple[Path, dict, str, str]]) -> dict:
+    def is_ssh(r: dict) -> bool:
+        return r.get("signing_version") == signing.SSH_V1
+    ssh_ok: dict[str, int] = {}
+    for _, r, st, who in rows:
+        if st == "valid" and is_ssh(r):
+            ssh_ok[who] = ssh_ok.get(who, 0) + 1
+    return {"ssh_ok": ssh_ok,
+            "hmac_ok": sum(1 for _, r, st, _ in rows if st == "valid" and not is_ssh(r)),
+            "ssh_unchecked": [x for x in rows if x[2] == "unchecked" and is_ssh(x[1])],
+            "hmac_unchecked": [x for x in rows if x[2] == "unchecked" and not is_ssh(x[1])],
+            "invalid": [x for x in rows if x[2] == "invalid"]}
 
 
 # ---------------------------------------------------------------- report
@@ -744,19 +950,18 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     # verification result is part of the report — a report on an unverified
     # chain would be exactly the kind of document this tool exists to prevent
-    sig_checked = KEY_PATH.exists() and load_key() is not None
     try:
         latest_receipt_hash(TREE)
         chain = "intact"
     except ChainStateError as exc:
         chain = f"BROKEN — {exc}"
-    bad_sig = 0
-    if sig_checked:
-        key = load_key()
-        for r in rs:
-            want = hmac.new(key, str(r.get("receipt_hash", "")).encode(), hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(want, str(r.get("signature", ""))):
-                bad_sig += 1
+    allowed = _allowed_signers(args)
+    rows = check_signatures([(Path(str(r.get("receipt_id", "?"))), r) for r in rs], allowed)
+    sigs = summarize(rows)
+    bad_sig = len(sigs["invalid"])
+    ssh_rs = [r for r in rs if r.get("signing_version") == signing.SSH_V1]
+    n_ssh, n_hmac = len(ssh_rs), len(rs) - len(ssh_rs)
+    all_checked = not sigs["ssh_unchecked"] and not sigs["hmac_unchecked"]
 
     def prov(r: dict) -> dict:
         return r.get("provenance") or {}
@@ -804,10 +1009,36 @@ def cmd_report(args: argparse.Namespace) -> int:
     L.append("## Verification")
     L.append("")
     L.append(f"- Chain structure (single unbroken line from GENESIS, content hashes recomputed): **{chain}**")
-    if sig_checked:
-        L.append(f"- Signatures (HMAC-SHA256 under the repo key): **{'all valid' if not bad_sig else f'{bad_sig}/{total} INVALID'}**")
-    else:
-        L.append("- Signatures: **not checked** (no key available where this report was generated)")
+    def sig_state(want_ssh: bool, unchecked: list, n_kind: int) -> str:
+        bad = sum(1 for _, r, st, _ in rows
+                  if st == "invalid" and (r.get("signing_version") == signing.SSH_V1) == want_ssh)
+        if bad:
+            return f"**{bad}/{n_kind} INVALID**"
+        if unchecked:
+            return f"**not checked** ({unchecked[0][3]})"
+        return "**all valid**"
+
+    if n_ssh:
+        L.append(f"- Signatures (SSH, each against its signer's key in `{allowed.as_posix()}`): "
+                 + sig_state(True, sigs["ssh_unchecked"], n_ssh))
+    if n_hmac:
+        if sigs["hmac_unchecked"]:
+            L.append("- Signatures (HMAC-SHA256 under the repo key): **not checked** "
+                     "(no key available where this report was generated)")
+        else:
+            L.append("- Signatures (HMAC-SHA256 under the repo key): "
+                     + sig_state(False, [], n_hmac))
+    if n_ssh:
+        signed: dict[tuple[str, str], int] = {}
+        for r in ssh_rs:
+            who = r.get("signer") or {}
+            k = (str(who.get("principal", "?")), str(who.get("key", "?")))
+            signed[k] = signed.get(k, 0) + 1
+        L += ["", "## Signed by", "", "| signer | SSH key | receipts |", "|---|---|---|"]
+        for (who, fp), c in sorted(signed.items(), key=lambda kv: -kv[1]):
+            L.append(f"| {who} | `{fp}` | {c} |")
+        if n_hmac:
+            L.append(f"| shared repo key (HMAC: doesn't identify a signer) | – | {n_hmac} |")
     L.append("")
     L.append("## Summary")
     L.append("")
@@ -846,12 +1077,21 @@ def cmd_report(args: argparse.Namespace) -> int:
     L.append("")
     L.append("## What this report proves — and does not")
     L.append("")
+    who_signed = []
+    if n_ssh:
+        who_signed.append(
+            f"SSH-signed receipts were each signed by the key `{ALLOWED_SIGNERS.as_posix()}` "
+            "lists for the named signer: that identifies the key, not who controls it, and "
+            "the key-to-person mapping is only as trustworthy as that file's history.")
+    if n_hmac:
+        who_signed.append("For HMAC-signed receipts it does **not** prove who held "
+                          "the key (HMAC is a shared secret).")
     L.append("Each receipt records a commit's changed-file hashes, diff hash, author, "
-             "and provenance claims, hash-chained to the previous receipt and HMAC-signed. "
+             "and provenance claims, hash-chained to the previous receipt and signed. "
              "An intact chain with valid signatures means the recorded history has not been "
-             "altered since signing, under a key the team controls. It does **not** prove who "
-             "held the key (HMAC is a shared secret), that any change was reviewed, or that the "
-             "AI-assistance claims are true — `ai_assisted` comes from commit trailers and from "
+             "altered since signing. " + " ".join(who_signed) + " It does **not** prove that "
+             "any change was reviewed, or that the AI-assistance claims are true — "
+             "`ai_assisted` comes from commit trailers and from "
              "the Claude Code hook that wrote the receipt, and model/version/transcript fields "
              "are what that tool observed locally. Commits made outside both the Claude Code "
              "hook and the git post-commit hook have no receipt and are not counted.")
@@ -867,8 +1107,10 @@ def cmd_report(args: argparse.Namespace) -> int:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         if chain != "intact" or bad_sig:
             value, color = "verification FAILED", BADGE_RED
-        elif sig_checked:
+        elif all_checked:
             value, color = f"{pct(len(ai), total)} · chain verified", BADGE_BLUE
+        elif sigs["ssh_ok"] or sigs["hmac_ok"]:
+            value, color = f"{pct(len(ai), total)} · partly verified", BADGE_GREY
         else:
             value, color = f"{pct(len(ai), total)} · structure only", BADGE_GREY
         snippet = write_badge(args.badge, value, color,
@@ -927,7 +1169,7 @@ def cmd_history(args: argparse.Namespace) -> int:
     n_ai = sum(1 for r in rows if r[2])
     lines = sum(r[3] for r in rows)
     lines_ai = sum(r[3] for r in rows if r[2])
-    initialized = KEY_PATH.exists()
+    initialized = KEY_PATH.exists() or ALLOWED_SIGNERS.exists() or bool(git_config(CFG_SSH_KEY))
     if getattr(args, "json", False):
         print(json.dumps({"repo": Path(root).name, "commits": n, "ai_commits": n_ai,
                           "lines_added": lines, "ai_lines_added": lines_ai,
@@ -1073,6 +1315,9 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("init"); p.add_argument("--force", action="store_true")
+    p.add_argument("--ssh", nargs="?", const="", default=None, metavar="KEY",
+                   help="sign with your SSH key (default: git's SSH signing key, "
+                        "else ~/.ssh/id_ed25519) and register it in .titan/allowed_signers")
     p.add_argument("--no-git-hook", action="store_true",
                    help="do not vendor tools / install the git post-commit hook")
     p.set_defaults(fn=cmd_init)
@@ -1084,9 +1329,15 @@ def main() -> int:
     p = sub.add_parser("hook"); p.set_defaults(fn=cmd_hook, auto=True, recorder="claude-code-hook",
                                                hook_payload=None)
     p = sub.add_parser("verify"); p.add_argument("--structure-only", action="store_true")
+    p.add_argument("--public-only", action="store_true",
+                   help="check SSH signatures, skip HMAC ones (verification with no secret)")
+    p.add_argument("--allowed-signers", metavar="FILE",
+                   help="trust this allowed_signers file instead of the repo's")
     p.set_defaults(fn=cmd_verify)
     p = sub.add_parser("report"); p.add_argument("--out")
     p.add_argument("--badge", help="also write a README badge SVG here")
+    p.add_argument("--allowed-signers", metavar="FILE",
+                   help="trust this allowed_signers file instead of the repo's")
     p.set_defaults(fn=cmd_report)
     p = sub.add_parser("history"); p.add_argument("--since", help="e.g. 2026-01-01 or '6 months ago'")
     p.add_argument("--json", action="store_true", help="machine-readable summary")

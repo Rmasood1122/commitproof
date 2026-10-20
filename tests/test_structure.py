@@ -97,7 +97,10 @@ def test_action_yml_is_composite_and_uses_pinned_verifier_by_default():
     a = yaml.safe_load((ROOT / "action.yml").read_text())
     assert a["runs"]["using"] == "composite"
     step = a["runs"]["steps"][0]["run"]
-    assert "verify --structure-only" in step and 'python3 "$TOOL" verify' in step
+    # no secret: still check SSH signatures (public), never silently skip them
+    assert "verify --public-only" in step and 'python3 "$TOOL" verify' in step
+    # CI can pin who may sign instead of trusting the audited repo
+    assert "allowed_signers" in a["inputs"] and "--allowed-signers" in step
     assert "rm -f .titan/key" in step and "exit $rc" in step   # key never outlives the step; report written even on failure
     assert "key" in a["inputs"] and a["inputs"]["key"]["required"] is False
 
