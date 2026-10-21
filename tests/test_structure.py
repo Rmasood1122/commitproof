@@ -71,6 +71,16 @@ def test_core_is_stdlib_only():
         assert not banned.search(p.read_text()), p
 
 
+def test_shipped_code_reads_no_session_id_variable():
+    """The directory's MCP_FORWARDS_CREDENTIAL_ENV rule treats *_SESSION_ID
+    environment variables as credentials. Nothing the plugin runs (core/,
+    hooks/, the Action) may name one, so the rule has nothing to match."""
+    shipped = [*(ROOT / "core").glob("*.py"), *(ROOT / "core").glob("*.sh"),
+               ROOT / "hooks" / "hooks.json", ROOT / "action.yml"]
+    for p in shipped:
+        assert "SESSION_ID" not in p.read_text(), p
+
+
 def test_no_claude_md_at_root():
     assert not (ROOT / "CLAUDE.md").exists()
 

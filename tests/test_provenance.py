@@ -121,6 +121,35 @@ def test_non_claude_coauthor_is_not_ai(repo):
     assert receipts(repo)[0]["provenance"]["ai_assisted"] is False
 
 
+def test_session_id_environment_variables_are_never_read(repo):
+    """v1.3.2: the plugin does not read session-id environment variables.
+    The directory treats them as credentials. A session id comes only from
+    the Claude Code hook payload or a Claude-Session commit trailer, both
+    of which the user's own tooling put there."""
+    run(["init", "--no-git-hook"], repo)
+    (repo / "b.py").write_text("x\n")
+    sh("git add -A && git commit -qm 'ai edit' -m 'Co-Authored-By: Claude <noreply@anthropic.com>'", repo)
+    env = clean_env(CLAUDECODE="1", CLAUDE_CODE_SESSION_ID="env-a", CLAUDE_SESSION_ID="env-b")
+    r = run(["create"], repo, env=env)
+    assert r.returncode == 0, r.stderr
+    rc = receipts(repo)[0]
+    assert "session_id" not in rc["provenance"]
+    assert "session" not in rc["attribution"]
+    assert rc["attribution"]["source"] == "commit-trailers"
+    assert "env-a" not in json.dumps(rc) and "env-b" not in json.dumps(rc)
+
+
+def test_session_trailer_is_still_recorded_without_the_environment(repo):
+    run(["init", "--no-git-hook"], repo)
+    (repo / "b.py").write_text("x\n")
+    sh("git add -A && git commit -qm 'ai edit' -m 'Claude-Session: sess-trailer-1'", repo)
+    r = run(["create"], repo)
+    assert r.returncode == 0, r.stderr
+    rc = receipts(repo)[0]
+    assert rc["provenance"]["session_id"] == "sess-trailer-1"
+    assert rc["attribution"]["session"] == "sess-trailer-1"
+
+
 # ------------------------------------------------------- claude-code hook
 def test_claude_hook_records_session_model_version_transcript(repo, tmp_path):
     run(["init", "--no-git-hook"], repo)

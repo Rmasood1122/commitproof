@@ -1,7 +1,7 @@
 {
   "name": "commitproof",
   "displayName": "CommitProof: AI Audit Trail",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Works in Claude Code. An audit trail for AI-written code. /ai-history answers 'how much of this repo did Claude help write?' in seconds from git history, no setup. /receipt-init then gives every commit a tamper-evident receipt (AI-assisted or not, model, Claude Code version, file hashes): hash-chained, signed, verified offline. /receipt-report turns the chain into a change-control report you can give SOC 2, HIPAA or PCI auditors as supporting evidence.",
   "author": {
     "name": "Rehan Masood",

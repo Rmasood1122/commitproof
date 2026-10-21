@@ -1,10 +1,10 @@
 """Self-contained README badge (no badge service, nothing phones home).
 
 Kept in its own module on purpose: this file holds the plugin's homepage
-URL and reads NOTHING from the environment; receipt.py reads session and
-version variables and holds no URLs. The directory's credential-forward
-scan matches a file that does both, and this split keeps that honest
-separation visible in the layout rather than only in the code."""
+URL and reads NOTHING from the environment; receipt.py holds no URLs and,
+since 1.3.2, reads no session-id variable at all (session ids come from the
+hook payload or a Claude-Session trailer). The split keeps the separation
+visible in the layout rather than only in the code."""
 from __future__ import annotations
 
 import html

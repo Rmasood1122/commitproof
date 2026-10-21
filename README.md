@@ -139,7 +139,7 @@ and a report built as change-control evidence. The two work side by side.
 ## Verify in CI
 
 ```yaml
-- uses: Rmasood1122/commitproof@v1.3.1
+- uses: Rmasood1122/commitproof@v1.3.2
   with:
     key: ${{ secrets.TITAN_KEY }}       # omit for structure-only verification
     report: docs/ai-change-receipts.md  # optional
@@ -195,7 +195,9 @@ lines, because a receipt system that overclaims is worse than none.
   commands, hashes the changed files, and reads the Claude Code session
   transcript named in the hook payload to record model names, the Claude
   Code version, its line count and sha256. Transcript content is never copied
-  into the receipt. Writes one JSON file under `.titan/attestations/`.
+  into the receipt. The session id comes from the hook payload or a
+  `Claude-Session:` commit trailer; no session-id environment variable is
+  read. Writes one JSON file under `.titan/attestations/`.
 - **`/receipt-init`:** creates `.titan/key` and adds it to `.gitignore`,
   copies `receipt.py`, `badge.py`, `canonical.py` and `chain_state.py` into
   `.titan/tools/`, and installs or appends to `.git/hooks/post-commit`.

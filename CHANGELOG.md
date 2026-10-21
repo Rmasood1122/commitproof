@@ -1,6 +1,28 @@
 # Changelog
 
-## Unreleased
+## 1.3.2 — 2026-10-21
+
+The plugin no longer reads any session-id environment variable. The
+directory held 1.3.1 under `MCP_FORWARDS_CREDENTIAL_ENV`, which treats a
+`*_SESSION_ID` variable as a credential. 1.3.1 kept the reads and only moved
+URLs away from them; that did not clear the hold. Nothing was ever sent
+anywhere (the plugin makes no network calls), but a session id has no
+business being read from the environment when better sources exist.
+
+- `core/receipt.py`: `CLAUDE_CODE_SESSION_ID` and `CLAUDE_SESSION_ID` are no
+  longer read. A receipt records a session id only from the Claude Code hook
+  payload or a `Claude-Session:` commit trailer. Receipts written by the
+  PostToolUse hook are unchanged. A manual `/receipt` inside Claude Code
+  records the session only if the commit carries the trailer (Claude Code
+  adds it by default). `attribution.source` is now always `commit-trailers`;
+  the old `commit-trailers+env` value no longer appears in new receipts.
+  Old receipts still verify.
+- Tests: the environment is never read for a session id, the trailer is
+  still recorded, and no shipped file names a `SESSION_ID` variable.
+- Version is now set per release. Three different 1.3.1 commits reached the
+  directory; from here every shipped change bumps the version.
+
+### Rename migration
 
 Installs made under the old name (`titan-receipts@titan-receipts-marketplace`)
 stopped loading after a marketplace update once the plugin became
