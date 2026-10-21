@@ -88,7 +88,7 @@ from chain_state import (                       # noqa: E402
 
 SCHEMA = "change-attestation/v1"
 SIGNING = "hmac-sha256-v1"
-PLUGIN_VERSION = "1.3.1"          # kept equal to .claude-plugin/plugin.json (tested)
+PLUGIN_VERSION = "1.3.2"          # kept equal to .claude-plugin/plugin.json (tested)
 KEY_PATH = Path(".titan/key")
 TREE = Path(".titan/attestations")
 TOOLS_DIR = Path(".titan/tools")
@@ -372,10 +372,6 @@ def _attribution(subject_body: str) -> dict:
         out["assisted_by"] = asst
     if ses:
         out["session"] = ses[0]
-    for env in ("CLAUDE_SESSION_ID",):
-        if os.environ.get(env):
-            out.setdefault("session", os.environ[env])
-            out["source"] = "commit-trailers+env"
     return out
 
 
@@ -441,13 +437,12 @@ def _provenance(msg: str, recorder: str, hook: dict | None) -> dict:
         "recorder_version": PLUGIN_VERSION,
     }
     hook = hook or {}
-    # Environment is trusted only when we are demonstrably inside a Claude
-    # Code session; a git post-commit hook from a human terminal must never
-    # inherit a stale session id from the environment.
+    # A session id comes only from the Claude Code hook payload or a
+    # Claude-Session commit trailer. The environment is never read for it.
+    # The version below is read from the environment only when we are
+    # demonstrably inside a Claude Code session.
     in_claude = bool(os.environ.get("CLAUDECODE"))
-    session = hook.get("session_id") or (
-        in_claude and (os.environ.get("CLAUDE_CODE_SESSION_ID")
-                       or os.environ.get("CLAUDE_SESSION_ID")))
+    session = hook.get("session_id")
     if session:
         prov["session_id"] = str(session)
     elif ses_trailer:
