@@ -1,6 +1,7 @@
 ---
 description: Generate a markdown compliance report from the receipt chain — AI-assisted share, by author/month/recorder, models and tool versions recorded, chain verification result, honest limits
 argument-hint: "[--out docs/ai-change-receipts.md] [--badge docs/ai-audit-badge.svg]"
+disable-model-invocation: true
 ---
 
 Produce the report:

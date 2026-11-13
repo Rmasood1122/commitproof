@@ -1,5 +1,6 @@
 ---
 description: Write a signed, chained receipt for the current commit — file hashes, diff hash, author, and provenance (AI-assisted or not, session, model, tool version)
+disable-model-invocation: true
 ---
 
 Create a receipt for HEAD:

@@ -1,6 +1,7 @@
 ---
 description: Start here — one-time setup that turns on receipts for this repo so every commit (AI-assisted or not) gets a tamper-evident record. Creates a gitignored signing key, a vendored verifier, and a git post-commit hook
 argument-hint: "[--no-git-hook] [--force]"
+disable-model-invocation: true
 ---
 
 Initialize receipts in the user's current repository:
