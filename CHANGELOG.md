@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.3.3 — 2026-11-19
+
+Receipt integrity fixes. Existing chains verify unchanged.
+
+- File hashes now come from the committed blobs (`git cat-file`), not the
+  working tree. 1.3.2 hashed whatever was on disk when the receipt was
+  written, so a file edited or deleted right after the commit, or a partially
+  staged commit, recorded bytes that were never committed, or no hash.
+- A commit whose diff holds non-UTF-8 bytes (a Latin-1 file) crashed receipt
+  writing with `UnicodeDecodeError`, and in hook mode lost the receipt
+  silently. Diffs are now hashed as raw bytes.
+- `diff_sha256` is computed with every config-sensitive diff option pinned
+  (colour, external diff, textconv, prefixes, context, algorithm, renames).
+  A `color.ui=always` or `diff.noprefix` config used to change the hash.
+- A receipt carrying `_meta`, `_debug` or `prev_receipt_hash_verified` (fields
+  the canonical hash skips) now fails `/verify-chain`, the report, and chain
+  extension. Before, `"_meta": {"reviewed_by": "security"}` verified as PASS.
+- `/verify-chain` and `/receipt-report` print a `COVERAGE` line: commits since
+  the first receipt that have no receipt (a deleted newest receipt shows up
+  here), and receipts for commits no longer in history (amend, rebase).
+  Informational; exit codes are unchanged.
+- The CI action removes any existing `.titan/key` (a symlink in the audited
+  repo would have redirected the write) and writes the key with `umask 077`.
+  `/receipt-init` creates the key file owner-only from the first byte.
+- Manifest author email updated.
+
 ## 1.3.2 — 2026-10-21
 
 The plugin no longer reads any session-id environment variable. The

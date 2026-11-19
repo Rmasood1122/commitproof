@@ -88,8 +88,13 @@ Each receipt is one small JSON file in `.titan/attestations/`:
 }
 ```
 
-Edit any recorded field (flip one `ai_assisted` flag) or delete a receipt from
-the middle of the chain, and `/verify-chain` fails and names the receipt.
+Edit any recorded field (flip one `ai_assisted` flag), add a field the
+signature doesn't cover, or delete a receipt from the middle of the chain, and
+`/verify-chain` fails and names the receipt. Deleting the *newest* receipts
+leaves a shorter chain that is still valid, so `/verify-chain` also prints a
+`COVERAGE` line from git history: which commits since the first receipt have
+no receipt, and which receipts name commits that are no longer in history
+(amended or rebased).
 
 ## Put it on your README
 
@@ -111,7 +116,7 @@ was altered, and **unsigned** when it comes from `/ai-history`.
 | `/ai-history` | Share of commits and lines added with a Claude trailer, by author and month, from git history. No setup, writes nothing, unsigned. `--since`, `--json`, `--badge`. |
 | `/receipt-init` | Generates the signing key (gitignored; init refuses if git tracks it), vendors the verifier into `.titan/tools/`, installs a git `post-commit` hook. `--no-git-hook` to skip the hook. |
 | `/receipt` | Writes a signed, chained receipt for HEAD by hand. One per commit; re-runs are no-ops. |
-| `/verify-chain` | Walks the whole chain offline: structure and every signature. Any tamper exits 1 and names the receipt. `--structure-only` checks without the key and says signatures were not checked. Ends with an `ANCHOR` line: how many receipts are committed **and pushed**. |
+| `/verify-chain` | Walks the whole chain offline: structure and every signature. Any tamper exits 1 and names the receipt. `--structure-only` checks without the key and says signatures were not checked. Then a `COVERAGE` line (commits since the first receipt with no receipt, receipts for commits no longer in history) and an `ANCHOR` line: how many receipts are committed **and pushed**. |
 | `/receipt-report` | Markdown evidence: verification result, AI-assisted share by recorder / author / month, models and Claude Code versions recorded, and the limits footer. `--out`, `--badge`. |
 
 ## Two hooks, full coverage
@@ -139,7 +144,7 @@ and a report built as change-control evidence. The two work side by side.
 ## Verify in CI
 
 ```yaml
-- uses: Rmasood1122/commitproof@v1.3.2
+- uses: Rmasood1122/commitproof@v1.3.3
   with:
     key: ${{ secrets.TITAN_KEY }}       # omit for structure-only verification
     report: docs/ai-change-receipts.md  # optional
@@ -171,7 +176,12 @@ chain, under a key your team controls.
   what the Claude Code hook observed locally. The chain proves they weren't
   edited afterwards, not that they were accurate when written.
 - **Anything about un-receipted commits.** Coverage is as good as hook
-  installation; the report counts only receipted commits.
+  installation; the report counts only receipted commits. The `COVERAGE`
+  line shows the gaps but can't say why one exists: a deleted newest receipt
+  and a commit made where no hook ran look the same. Inside Claude Code the
+  git hook defers to the plugin hook, which only fires on a `git commit`
+  command, so commits Claude makes another way (`git merge`, `cherry-pick`,
+  a script) get no receipt.
 - **Ordering to anyone but you** until `.titan/attestations/` is committed and
   pushed. Every pushed clone then holds an independent copy a rewrite would
   have to chase down, and `/verify-chain` reports how much is pushed.
@@ -192,7 +202,8 @@ lines, because a receipt system that overclaims is worse than none.
   one-time setup notice and records that it did in the plugin's data folder
   (a hash of the repo path, nothing inside your repo).
 - **When it writes a receipt** (receipts on, commit made): runs read-only git
-  commands, hashes the changed files, and reads the Claude Code session
+  commands, hashes the changed files as committed (from git's object store,
+  not the working tree), and reads the Claude Code session
   transcript named in the hook payload to record model names, the Claude
   Code version, its line count and sha256. Transcript content is never copied
   into the receipt. The session id comes from the hook payload or a
