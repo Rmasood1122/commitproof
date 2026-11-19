@@ -52,7 +52,11 @@ runs:
         fi
         rc=0
         if [ -n "$TITAN_KEY" ]; then
-          mkdir -p .titan && printf '%s\n' "$TITAN_KEY" > .titan/key && chmod 600 .titan/key
+          # The audited repo controls .titan/: a committed symlink at
+          # .titan/key would make this write land wherever it points. Remove
+          # whatever is there first, and create the file owner-only.
+          mkdir -p .titan && rm -f .titan/key
+          ( umask 077 && printf '%s\n' "$TITAN_KEY" > .titan/key )
           python3 "$TOOL" verify || rc=$?
         else
           python3 "$TOOL" verify --structure-only || rc=$?

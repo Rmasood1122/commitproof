@@ -82,13 +82,35 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from badge import BADGE_BLUE, BADGE_GREY, BADGE_RED, write_badge   # noqa: E402
 from canonical import canonical_bytes           # noqa: E402
+from canonical import EXCLUSION_FIELDS          # noqa: E402
 from chain_state import (                       # noqa: E402
     GENESIS, ChainStateError, latest_receipt_hash,
 )
 
+# The canonical hash skips these fields (shared with titan-gate's profiles).
+# A change-attestation receipt never writes any of them except signature and
+# receipt_hash, so one that carries the others has content nobody signed:
+# `"_meta": {"reviewed_by": "security"}` would otherwise verify as PASS.
+UNSIGNED_FIELDS = EXCLUSION_FIELDS - {"signature", "receipt_hash"}
+
+
+def walk_chain() -> str:
+    """Full structural walk of .titan/attestations/ (vendored chain rules)
+    plus this profile's own rule: no unsigned fields. Returns the head hash;
+    raises ChainStateError on any problem."""
+    head = latest_receipt_hash(TREE)
+    for p in sorted(TREE.rglob("*.json")):
+        r = json.loads(p.read_text(encoding="utf-8"))
+        extra = sorted(UNSIGNED_FIELDS & set(r))
+        if extra:
+            raise ChainStateError(
+                f"receipt {p}: carries unsigned field(s) {', '.join(extra)} — "
+                f"content outside the hash and signature is not part of the record")
+    return head
+
 SCHEMA = "change-attestation/v1"
 SIGNING = "hmac-sha256-v1"
-PLUGIN_VERSION = "1.3.2"          # kept equal to .claude-plugin/plugin.json (tested)
+PLUGIN_VERSION = "1.3.3"          # kept equal to .claude-plugin/plugin.json (tested)
 KEY_PATH = Path(".titan/key")
 TREE = Path(".titan/attestations")
 TOOLS_DIR = Path(".titan/tools")
@@ -123,9 +145,23 @@ def git(*args: str) -> str:
     # which mangled 'café.py' into 'cafÃ©.py' (no such file → content hash
     # silently dropped) and made diff_sha256 differ between a receipt written
     # on Windows and one written on Linux for the same commit.
-    r = subprocess.run(["git", *args], capture_output=True, text=True, encoding="utf-8")
+    # errors="replace": a commit message or author name in Latin-1 must not
+    # crash receipt writing (UnicodeDecodeError lost the receipt silently in
+    # hook mode). Content that is hashed is read as bytes via git_bytes().
+    r = subprocess.run(["git", *args], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
     if r.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)}: {r.stderr.strip()}")
+    return r.stdout
+
+
+def git_bytes(*args: str, stdin: bytes | None = None) -> bytes:
+    """git output as raw bytes: diffs and file contents are hashed exactly as
+    git stores them, whatever their encoding."""
+    r = subprocess.run(["git", *args], capture_output=True, input=stdin)
+    if r.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)}: "
+                           f"{r.stderr.decode('utf-8', 'replace').strip()}")
     return r.stdout
 
 
@@ -134,14 +170,6 @@ def repo_root() -> Path | None:
         return Path(git("rev-parse", "--show-toplevel").strip())
     except RuntimeError:
         return None
-
-
-def sha256_file(p: Path) -> str:
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for blk in iter(lambda: f.read(65536), b""):
-            h.update(blk)
-    return h.hexdigest()
 
 
 def load_key() -> bytes | None:
@@ -161,42 +189,86 @@ def load_key() -> bytes | None:
     return key
 
 
-def changed_files(sha: str) -> tuple[list[dict], str, int]:
-    """(files, patch, n_parents) for a commit.
+# The diff that diff_sha256 covers is produced with every option that a
+# user's git config could change pinned on the command line: colour, external
+# diff drivers, textconv, path prefixes, context lines, algorithm, renames.
+# Without this, the same commit hashed differently on two machines (and a
+# `color.ui=always` config put ANSI escapes into the hashed bytes).
+_DIFF_PINS = ("--no-color", "--no-ext-diff", "--no-textconv",
+              "--src-prefix=a/", "--dst-prefix=b/", "-U3", "--inter-hunk-context=0",
+              "--diff-algorithm=myers", "--indent-heuristic", "--find-renames",
+              "--no-relative")
 
-    - NUL-separated name-status (-z): git C-quotes non-ASCII/special paths
-      in line mode, which turned 'café.py' into '"caf\\303\\251.py"' — a path
-      that matches no file, so its content hash was silently DROPPED. An
-      attestation tool must never silently skip content.
-    - Merge commits diff against the FIRST parent: 'git show' prints the
-      combined diff for merges, which is usually empty — a receipt with
-      files=[] attests nothing without saying so.
+
+def _empty_tree() -> str:
+    return git_bytes("hash-object", "-t", "tree", "--stdin", stdin=b"").decode().strip()
+
+
+def _blob_hashes(oids: list[str]) -> dict[str, str]:
+    """sha256 of each blob's COMMITTED bytes, read from the object store with
+    one `git cat-file --batch` call (no per-file process, no working tree)."""
+    if not oids:
+        return {}
+    out = git_bytes("cat-file", "--batch", stdin=("\n".join(oids) + "\n").encode())
+    hashes: dict[str, str] = {}
+    pos = 0
+    for oid in oids:
+        nl = out.index(b"\n", pos)
+        header = out[pos:nl].split()
+        pos = nl + 1
+        if len(header) != 3 or header[1] != b"blob":
+            raise RuntimeError(f"cat-file: {oid} is not a blob ({header!r})")
+        size = int(header[2])
+        hashes[oid] = hashlib.sha256(out[pos:pos + size]).hexdigest()
+        pos += size + 1                      # content is followed by a newline
+    return hashes
+
+
+def changed_files(sha: str) -> tuple[list[dict], bytes, int]:
+    """(files, patch_bytes, n_parents) for a commit.
+
+    - Content hashes are of the blobs IN THE COMMIT, read from git's object
+      store. 1.3.2 hashed the working-tree file instead, so a file edited (or
+      deleted) after the commit, or a partially staged commit, recorded bytes
+      that were never committed, or no hash at all.
+    - NUL-separated raw output (-z): git C-quotes non-ASCII paths in line
+      mode, which once turned 'café.py' into a path that matched no file.
+    - Merge commits diff against the FIRST parent: the combined diff of a
+      merge is usually empty, and a receipt with files=[] attests nothing.
+    - A root commit diffs against the empty tree.
     """
     parents = git("rev-list", "--parents", "-n", "1", sha).split()[1:]
-    if len(parents) >= 2:
-        raw = git("diff", "--name-status", "-z", f"{sha}^1", sha)
-        patch = git("diff", f"{sha}^1", sha)
-    else:
-        raw = git("show", "--name-status", "-z", "--format=", sha)
-        patch = git("show", "--format=", sha)
+    base = f"{sha}^1" if parents else _empty_tree()
+    raw = git_bytes("diff-tree", "-z", "-r", "--raw", "--find-renames",
+                    "--no-abbrev", base, sha).decode("utf-8", "surrogateescape")
+    patch = git_bytes("diff", *_DIFF_PINS, base, sha)
     files: list[dict] = []
+    pending: list[tuple[dict, str]] = []
     toks = raw.split("\0")
     i = 0
     while i < len(toks):
-        status = toks[i].strip()
-        if not status:
+        meta = toks[i]
+        if not meta.startswith(":"):
             i += 1
             continue
-        n_paths = 2 if status[:1] in ("R", "C") else 1  # rename/copy: old, new
-        paths = [t for t in toks[i + 1:i + 1 + n_paths]]
+        # ":oldmode newmode oldoid newoid STATUS"
+        _om, new_mode, _oo, new_oid, status = meta[1:].split(" ")
+        n_paths = 2 if status[:1] in ("R", "C") else 1
+        paths = toks[i + 1:i + 1 + n_paths]
         i += 1 + n_paths
         if not paths or not paths[-1]:
             continue
-        entry: dict = {"path": paths[-1], "status": status[:1]}
-        fp = Path(paths[-1])
-        if fp.is_file():
-            entry["sha256"] = sha256_file(fp)
+        path = paths[-1].encode("utf-8", "surrogateescape").decode("utf-8", "replace")
+        entry: dict = {"path": path, "status": status[:1]}
+        if status[:1] != "D":
+            if new_mode == "160000":
+                entry["gitlink"] = new_oid          # submodule: record its commit
+            else:
+                pending.append((entry, new_oid))
         files.append(entry)
+    hashes = _blob_hashes(sorted({oid for _, oid in pending}))
+    for entry, oid in pending:
+        entry["sha256"] = hashes[oid]
     return files, patch, len(parents)
 
 
@@ -225,9 +297,15 @@ def cmd_init(args: argparse.Namespace) -> int:
             print(install_git_hook(Path(root)))
         return 0
     KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    KEY_PATH.write_text(secrets.token_hex(32) + "\n")
+    if KEY_PATH.is_symlink():
+        KEY_PATH.unlink()                  # never write the secret through a link
+    # owner-only from the first byte (write-then-chmod left a window where the
+    # key was readable under the default umask)
+    fd = os.open(KEY_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(secrets.token_hex(32) + "\n")
     try:
-        KEY_PATH.chmod(0o600)
+        KEY_PATH.chmod(0o600)              # also tightens a pre-existing file on --force
     except OSError:
         pass  # windows
     gi = Path(".gitignore")
@@ -511,7 +589,7 @@ def cmd_create(args: argparse.Namespace) -> int:
                 return die(f"unreadable receipt in tree: {p}", 1)
 
     try:
-        prev = latest_receipt_hash(TREE)
+        prev = walk_chain()
     except ChainStateError as exc:
         return die(f"refusing to extend a broken chain: {exc}", 1)
 
@@ -527,7 +605,7 @@ def cmd_create(args: argparse.Namespace) -> int:
                    "parents": n_parents, "author": author,
                    "committed_at": committed_at},
         "files": files,
-        "diff_sha256": hashlib.sha256(patch.encode()).hexdigest(),
+        "diff_sha256": hashlib.sha256(patch).hexdigest(),
         "attribution": _attribution(msg),
         "provenance": _provenance(msg, getattr(args, "recorder", "manual") or "manual",
                                   getattr(args, "hook_payload", None)),
@@ -666,7 +744,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     # Structure first: it needs no key, so a clone that has the attestations
     # but not the (correctly gitignored) key still gets a real answer.
     try:
-        head = latest_receipt_hash(TREE)  # full structural walk, fail-closed
+        head = walk_chain()  # full structural walk, fail-closed
     except ChainStateError as exc:
         print(f"CHAIN FAIL: {exc}", file=sys.stderr)
         return 1
@@ -678,6 +756,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         print("NOT CHECKED: signatures — no key was used. This proves the "
               "receipts are internally consistent and unaltered relative to "
               "their own hashes, not that they were signed by the key holder.")
+        _report_coverage()
         _report_anchor()
         return 0
 
@@ -692,6 +771,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
               "internally consistent, not that they were signed under the "
               "team's key. Obtain the key out-of-band to verify signatures.",
               file=sys.stderr)
+        _report_coverage()
         _report_anchor()
         return 2
     key = load_key()
@@ -711,6 +791,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     print(f"chain OK: {n} receipt(s), head {head[:12]}…")
     print("PASS means: contents unchanged since signing, under this shared "
           "key. It does not identify the signer.")
+    _report_coverage()
     _report_anchor()
     return 0
 
@@ -741,7 +822,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     # chain would be exactly the kind of document this tool exists to prevent
     sig_checked = KEY_PATH.exists() and load_key() is not None
     try:
-        latest_receipt_hash(TREE)
+        walk_chain()
         chain = "intact"
     except ChainStateError as exc:
         chain = f"BROKEN — {exc}"
@@ -803,6 +884,13 @@ def cmd_report(args: argparse.Namespace) -> int:
         L.append(f"- Signatures (HMAC-SHA256 under the repo key): **{'all valid' if not bad_sig else f'{bad_sig}/{total} INVALID'}**")
     else:
         L.append("- Signatures: **not checked** (no key available where this report was generated)")
+    cov = coverage_status()
+    if cov["measurable"]:
+        L.append(f"- Coverage: **{cov['covered']} of {cov['commits']}** commits since the first "
+                 f"receipt have a receipt" + (f"; {len(cov['orphaned'])} receipt(s) name commits "
+                 f"no longer in this branch's history" if cov["orphaned"] else ""))
+    else:
+        L.append("- Coverage: not measured (first receipted commit not in this branch's history)")
     L.append("")
     L.append("## Summary")
     L.append("")
@@ -987,6 +1075,73 @@ def cmd_history(args: argparse.Namespace) -> int:
                           f"{n_ai} of {n} commits carry a Claude trailer, as of {today} "
                           f"(unsigned, from git history)"), file=sys.stderr)
     return 0
+
+
+# -------------------------------------------------------------- coverage
+def coverage_status() -> dict:
+    """Which commits since the first receipt have no receipt, and which
+    receipts name a commit that is no longer in this branch's history.
+
+    The chain alone cannot see either: deleting the NEWEST receipts leaves a
+    shorter chain that is still valid, and an amend or rebase leaves receipts
+    for commits nobody can check out. Git history can. Informational: a gap
+    can be legitimate (a commit made where no hook was installed, a merge made
+    on the server), so it is reported, not failed. Never raises."""
+    out: dict = {"measurable": False, "orphaned": []}
+    try:
+        rs = _load_tree()
+        history = set(git("rev-list", "HEAD").split())
+    except (RuntimeError, OSError):
+        return out
+    out["orphaned"] = [((r.get("commit") or {}).get("sha", ""),
+                        (r.get("commit") or {}).get("subject", ""))
+                       for r in rs if (r.get("commit") or {}).get("sha") not in history]
+    first = next((r for r in rs if r.get("prev_receipt_hash") == GENESIS), None)
+    first_sha = ((first or {}).get("commit") or {}).get("sha", "")
+    if first_sha not in history:
+        return out
+    try:
+        parents = git("rev-list", "--parents", "-n", "1", first_sha).split()[1:]
+        log = git("log", "--format=%x1e%H%x1f%s", "--name-only", "HEAD",
+                  *(["--not", *parents] if parents else []))
+    except RuntimeError:
+        return out
+    receipted = {(r.get("commit") or {}).get("sha") for r in rs}
+    in_range: list[tuple[str, str]] = []
+    for rec in log.split("\x1e")[1:]:
+        head, _, names = rec.partition("\n")
+        sha, _, subject = head.partition("\x1f")
+        paths = [n for n in names.splitlines() if n.strip()]
+        if paths and all(_is_titan_path(n) for n in paths):
+            continue                       # receipt bookkeeping: never receipted
+        in_range.append((sha, subject))
+    out.update(measurable=True, commits=len(in_range),
+               covered=sum(1 for sha, _ in in_range if sha in receipted),
+               missing=[(sha, subj) for sha, subj in in_range if sha not in receipted])
+    return out
+
+
+def _report_coverage() -> None:
+    c = coverage_status()
+    if not c["measurable"]:
+        print("COVERAGE: not measured — the first receipted commit is not in this "
+              "branch's history (shallow clone, other branch, or rewritten history).",
+              file=sys.stderr)
+    elif not c["missing"]:
+        print(f"COVERAGE: {c['covered']} of {c['commits']} commits since the first "
+              f"receipt have a receipt.")
+    else:
+        shown = ", ".join(f"{sha[:12]} {subj[:40]}" for sha, subj in c["missing"][:5])
+        more = f" (+{len(c['missing']) - 5} more)" if len(c["missing"]) > 5 else ""
+        print(f"COVERAGE: {c['covered']} of {c['commits']} commits since the first "
+              f"receipt have a receipt. No receipt: {shown}{more}. A deleted newest "
+              f"receipt looks exactly like this; so does a commit made where no "
+              f"hook was installed.", file=sys.stderr)
+    if c["orphaned"]:
+        shown = ", ".join(f"{sha[:12]} {subj[:40]}" for sha, subj in c["orphaned"][:5])
+        print(f"HISTORY: {len(c['orphaned'])} receipt(s) name commits not in the "
+              f"current history of HEAD (amended, rebased, or on another branch): "
+              f"{shown}.", file=sys.stderr)
 
 
 # ---------------------------------------------------------------- anchor

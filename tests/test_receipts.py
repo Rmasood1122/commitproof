@@ -190,8 +190,13 @@ def test_hashes_are_over_gits_raw_utf8_bytes_on_every_platform(repo):
     assert r["diff_sha256"] == hashlib.sha256(raw_diff).hexdigest()
     by_path = {f["path"]: f for f in r["files"]}
     assert "notes — café.md" in by_path, list(by_path)
-    assert by_path["notes — café.md"]["sha256"] == hashlib.sha256(
-        (repo / "notes — café.md").read_bytes()).hexdigest()
+    # Content hashes attest the COMMITTED blob, not the working tree: on
+    # Windows with core.autocrlf the checkout has CRLF while the commit (and a
+    # Linux receipt of the same commit) has LF, so only the blob is the same
+    # thing on every platform.
+    blob = subprocess.run(["git", "cat-file", "blob", f"{sha}:notes — café.md"],
+                          cwd=repo, capture_output=True, check=True).stdout
+    assert by_path["notes — café.md"]["sha256"] == hashlib.sha256(blob).hexdigest()
 
 
 def test_merge_commit_attests_first_parent_diff(repo):
