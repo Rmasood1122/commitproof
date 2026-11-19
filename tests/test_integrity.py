@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 
 from _env import clean_env
-from _shell import shell_argv
+from _shell import posix, shell_argv
 
 PLUGIN = Path(__file__).resolve().parents[1]
 RECEIPT = PLUGIN / "core" / "receipt.py"
@@ -102,7 +102,7 @@ def test_external_diff_config_does_not_change_receipt(repo, tmp_path_factory):
     want = receipt_for(repo, "two")["diff_sha256"]
     # same commit, but a user config that rewrites diff output
     other = tmp_path_factory.mktemp("clone")
-    sh(f"git clone -q {repo} {other}/c", other)
+    sh(f"git clone -q {posix(repo)} {posix(other / 'c')}", other)
     c = other / "c"
     sh("git config user.email t@t && git config user.name T && "
        "git config color.ui always && git config diff.noprefix true && "
