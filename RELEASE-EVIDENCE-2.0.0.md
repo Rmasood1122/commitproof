@@ -2241,3 +2241,40 @@ Raw output:
  40 files changed, 365 insertions(+), 4606 deletions(-)
 ```
 
+## After the hand-off — commit email rewrite
+
+`git push origin v2-candidate` was rejected by GitHub (GH007): the 13 new commits carried rmasood112224@gmail.com, which Rehan keeps private. On his choice, the commits were rewritten with `git filter-branch --env-filter`. Only the author and committer email changed, to 289694474+Rmasood1122@users.noreply.github.com, the address used on main. The repo-local `user.email` was set to the same address. The commit IDs cited above are the old ones; local tags `archive/pre-noreply-v2-candidate` and `archive/pre-noreply-engine` keep them. Each old commit maps to a new commit with an identical file tree, so every gate result above holds unchanged for the new commits.
+
+### Gate R.1: noreply rewrite: every old commit maps to a new one with an identical tree, subject and dates; no private address left
+
+- Time (UTC): 2026-11-20T12:40:54Z
+- Checkout: engine @ e9016e1 (2 uncommitted change(s))
+- Pass rule: `contains:rewrite check: PASS`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+bash evals/ai-history-v2/rewrite_check.sh
+```
+
+Raw output:
+
+```text
+v2-candidate: da7f79c -> 982003c  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+v2-candidate: 80b0cb7 -> e4afeab  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+v2-candidate: 1bc3aa3 -> 30a9909  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+v2-candidate: 62c7ae2 -> 3e2b193  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 3c3b119 -> db87f0d  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 68284d4 -> 63d9b9b  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 989a60c -> 7b59fee  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: a0d6569 -> 77b72a9  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 489605c -> e8c2db1  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 00d5383 -> 5620cf2  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 92ea953 -> d5aa5d8  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 2e8feb2 -> 51d484c  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+engine: 94e61af -> e9016e1  tree identical: yes  subject+dates identical: yes  new author: 289694474+Rmasood1122@users.noreply.github.com
+private address left on new commits: 0
+rewrite check: PASS
+```
+
