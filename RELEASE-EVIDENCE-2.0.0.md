@@ -965,3 +965,442 @@ Raw output:
 (no output)
 ```
 
+## P4 — Docs and the finished tree (branch v2-candidate)
+
+### Gate 4g.1: only allowed file types are tracked
+
+- Time (UTC): 2026-11-20T12:08:29Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git ls-files | grep -Ev '\.(md|txt|json|ya?ml|png|jpe?g|gif|webp|ico)$' | grep -Ev '^(LICENSE|\.gitignore|\.claude-plugin/icon\.svg)$'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4g.2: no tracked file starts with #!
+
+- Time (UTC): 2026-11-20T12:08:29Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 123)
+
+Command:
+
+```sh
+git ls-files | xargs grep -l '^#!'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4g.3: no dynamic-context lines, allowed-tools, credential names or installs
+
+- Time (UTC): 2026-11-20T12:08:30Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git grep -nE '!`|allowed-tools|TOKEN|SECRET|API_KEY|getenv|environ|pip install|npx|uvx|curl |marketplace add'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4g.4: no file over 256 KiB
+
+- Time (UTC): 2026-11-20T12:08:30Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+find . -size +256k -not -path './.git/*'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4g.5: (stricter) .claude-plugin holds only plugin.json and the icon
+
+- Time (UTC): 2026-11-20T12:08:30Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `exact:.claude-plugin/icon.svg\n.claude-plugin/plugin.json`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+git ls-files .claude-plugin
+```
+
+Raw output:
+
+```text
+.claude-plugin/icon.svg
+.claude-plugin/plugin.json
+```
+
+### Gate 4g.6: (stricter) no credential, secret, key or env-var words, any letter case
+
+- Time (UTC): 2026-11-20T12:08:30Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git grep -niE 'token|secret|api[_-]?key|passw|credential|\benv\b|environ|getenv|\$[A-Z_]{2,}|\$\{|CLAUDE_PLUGIN_ROOT|\bkey\b|\.titan'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4g.7: (stricter) no install commands of any package manager
+
+- Time (UTC): 2026-11-20T12:08:31Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git grep -niE '\b(npm|pip3?|brew|apt(-get)?|winget|choco|cargo|go|gem|uv) +install|/plugin +install|npx|uvx|curl |wget '
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4g.8: (stricter) UTF-8 only, no NUL bytes, no CR in committed blobs
+
+- Time (UTC): 2026-11-20T12:08:33Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git ls-files -z | xargs -0 -n1 sh -c 'iconv -f UTF-8 -t UTF-8 "$0" > /dev/null 2>&1 || echo "not UTF-8: $0"'
+git ls-files -z | xargs -0 -n1 sh -c 'tr -d "\\000" < "$0" | cmp -s - "$0" || echo "NUL byte: $0"'
+git grep -lI $'\r' HEAD
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4g.9: (stricter) plugin.json fields exact; no hooks, userConfig, mcpServers or lsp
+
+- Time (UTC): 2026-11-20T12:08:33Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+python - <<'PY'
+import json
+m = json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))
+want = {'name': 'titan-receipts', 'displayName': 'Titan Receipts', 'version': '2.0.0',
+        'privacyPolicyUrl': 'https://github.com/Rmasood1122/commitproof/blob/main/PRIVACY.md',
+        'icon': './.claude-plugin/icon.svg'}
+for k, v in want.items():
+    if m.get(k) != v:
+        print('wrong', k, repr(m.get(k)))
+if m.get('author', {}).get('email') != 'rmasood112224@gmail.com':
+    print('wrong author.email')
+bad_kw = [k for k in m.get('keywords', []) if any(b in k.lower() for b in ('soc2', 'soc-2', 'hipaa', 'pci', 'tamper'))]
+if bad_kw:
+    print('banned keywords', bad_kw)
+for k in ('hooks', 'userConfig', 'mcpServers', 'lspServers', 'lsp', 'agents', 'outputStyles', 'monitors'):
+    if k in m:
+        print('forbidden field', k)
+PY
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4.1: no banned wording in shipped files (any letter case, nothing masked)
+
+- Time (UTC): 2026-11-20T12:08:34Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git grep -niE 'compliant|certif|\bproofs?\b|\bproves?\b|tamper|audit-ready|audit trail|soc ?2|hipaa|\bpci\b|reviewed|\b[0-9]+(\.[0-9]+)?x\b'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 4.2: README has at least 40 words outside code blocks
+
+- Time (UTC): 2026-11-20T12:08:34Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `contains:README words outside code: PASS`
+- Result: **FAIL** (exit 0)
+
+Command:
+
+````sh
+python - <<'PY'
+import re
+t = open('README.md', encoding='utf-8').read()
+prose = re.sub(r'(?ms)^```.*?^```', ' ', t)
+n = len(prose.split())
+print('README words outside code:', n, 'PASS' if n >= 40 else 'FAIL')
+PY
+````
+
+Raw output:
+
+```text
+README words outside code: 805 PASS
+```
+
+### Gate 4.3: the tree is exactly the target tree
+
+- Time (UTC): 2026-11-20T12:08:34Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `exact:.claude-plugin/icon.svg\n.claude-plugin/plugin.json\n.gitignore\nCHANGELOG.md\nLICENSE\nPRIVACY.md\nREADME.md\ncommands/ai-history.md\nskills/ai-history/SKILL.md\nskills/ai-history/reference/trailers.md`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+git ls-files
+```
+
+Raw output:
+
+```text
+.claude-plugin/icon.svg
+.claude-plugin/plugin.json
+.gitignore
+CHANGELOG.md
+LICENSE
+PRIVACY.md
+README.md
+commands/ai-history.md
+skills/ai-history/SKILL.md
+skills/ai-history/reference/trailers.md
+```
+
+### Gate 4.4: layer 1 again with README: its blocks equal the command's, and every number equals the golden oracle
+
+- Time (UTC): 2026-11-20T12:09:06Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `contains:layer 1: PASS`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+bash '/c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/layer1.sh' '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2' '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx' /c/Users/rmaso/code/Rmasood1122/commitproof /c/Users/rmaso/code/Rmasood1122/appealforge
+```
+
+Raw output:
+
+```text
+method text identical in command and skill: PASS
+README sh blocks byte-identical to the command's: PASS
+a: step 1 + block: commits 12/0 lines 138/0 authors 3 months 3: PASS
+a: step 2b (emails) equals golden: PASS
+b: step 1 + block: commits 10/10 lines 185/185 authors 2 months 2: PASS
+b: step 2b (emails) equals golden: PASS
+c: step 1 + block: commits 16/7 lines 409/141 authors 3 months 3: PASS
+c: step 2b (emails) equals golden: PASS
+d: step 1 + block: commits 12/6 lines 114/53 authors 2 months 3: PASS
+d: step 2b (emails) equals golden: PASS
+e: step 1 + block: commits 10/8 lines 65/47 authors 2 months 1: PASS
+e: step 2b (emails) equals golden: PASS
+f: empty repository, step 1 prints true, nothing, false: PASS  ['true', 'false']
+g: step 1 + block: commits 5000/1750 lines 127500/42000 authors 20 months 12: PASS
+g: step 2b (emails) equals golden: PASS
+h: step 1 + block: commits 8/3 lines 70/20 authors 2 months 3: PASS
+h: step 2b (emails) equals golden: PASS
+hostile config (log.showRoot=false, diff.relative=true, run in data/) equals golden(c): PASS
+control: plain git log under that config gives a different lines total: PASS  plain=200 block=409
+real repo commitproof: commits 41/41 lines 7928/7928 authors 3: PASS
+real repo appealforge: commits 143/126 lines 70523/47466 authors 4: PASS
+layer 1: PASS
+```
+
+### Gate 4.5: the README sample is fixture c's golden answer, rendered by code
+
+- Time (UTC): 2026-11-20T12:09:06Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `contains:README sample matches: True`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+python - 'C:\Users\rmaso\code\Rmasood1122\commitproof\evals\ai-history-v2' 'C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\fx' <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from block_check import render_layout
+from fixtures import isolated_env
+from golden import golden
+fx = Path(sys.argv[2])
+want = '\n'.join(('> ' + l) if l else '>' for l in render_layout(golden(fx / 'c', env=isolated_env(fx / '_git'))).splitlines())
+print('README sample matches:', want in open('README.md', encoding='utf-8').read().replace('\r\n', '\n'))
+PY
+```
+
+Raw output:
+
+```text
+README sample matches: True
+```
+
+### Gate 4.6: claude plugin validate (default)
+
+- Time (UTC): 2026-11-20T12:09:07Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `contains:Validation passed`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+claude plugin validate .
+```
+
+Raw output:
+
+```text
+Validating plugin manifest: C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\.claude-plugin\plugin.json
+
+Provides:
+
+  ❯ skills: titan-receipts:ai-history
+  ❯ commands: titan-receipts:ai-history
+
+Hosts not read for: skills (1), commands (1)
+
+Plugin directory checks for C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2. The plugin directory is the catalog that plugins are submitted to; this is a subset of what it runs.
+
+✔ These checks found nothing to report
+
+The directory also runs a safety scan and a policy review that this command does not.
+
+ℹ Advice (does not change the verdict):
+
+  ❯ C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\README.md: This README has no line that installs "titan-receipts" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. Validate the folder that holds its marketplace.json to have <owner>/<repo> filled in, and the name its marketplace lists it under.
+      /plugin install titan-receipts --marketplace <owner>/<repo>
+
+✔ Validation passed
+```
+
+### Gate 4.7: claude plugin validate --strict --profile directory (stricter than spec)
+
+- Time (UTC): 2026-11-20T12:09:08Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `exit0`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+claude plugin validate . --strict --profile directory
+```
+
+Raw output:
+
+```text
+Validating plugin manifest: C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\.claude-plugin\plugin.json
+
+Provides:
+
+  ❯ skills: titan-receipts:ai-history
+  ❯ commands: titan-receipts:ai-history
+
+Hosts not read for: skills (1), commands (1)
+
+Plugin directory checks for C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2. The plugin directory is the catalog that plugins are submitted to; this is a subset of what it runs.
+
+✔ These checks found nothing to report
+
+The directory also runs a safety scan and a policy review that this command does not.
+
+ℹ Advice (does not change the verdict):
+
+  ❯ C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\README.md: This README has no line that installs "titan-receipts" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. Validate the folder that holds its marketplace.json to have <owner>/<repo> filled in, and the name its marketplace lists it under.
+      /plugin install titan-receipts --marketplace <owner>/<repo>
+
+✔ Validation passed
+```
+
+> Gate 4.2 attempt 1 failed in the gate itself. The script printed `805 PASS` and the rule looked for `: PASS`. The README had 805 words outside code, against a minimum of 40. The print now puts the verdict first. Attempt 2 follows.
+
+### Gate 4.2 (attempt 2): README has at least 40 words outside code blocks
+
+- Time (UTC): 2026-11-20T12:09:21Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `contains:README words outside code: PASS`
+- Result: **PASS** (exit 0)
+
+Command:
+
+````sh
+python - <<'PY'
+import re
+t = open('README.md', encoding='utf-8').read()
+prose = re.sub(r'(?ms)^```.*?^```', ' ', t)
+n = len(prose.split())
+print('README words outside code: ' + ('PASS' if n >= 40 else 'FAIL') + ' (' + str(n) + ')')
+PY
+````
+
+Raw output:
+
+```text
+README words outside code: PASS (805)
+```
+
