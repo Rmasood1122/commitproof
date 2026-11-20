@@ -656,3 +656,312 @@ Raw output:
 (no output)
 ```
 
+## P3 — Command, skill, trailer reference (branch v2-candidate)
+
+### Gate 3.1-3.4: layer 1: command = skill text; fixtures a-h, 2b emails, hostile config and two real repos equal the golden oracle
+
+- Time (UTC): 2026-11-20T12:06:02Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `contains:layer 1: PASS`
+- Result: **FAIL** (exit 1)
+
+Command:
+
+```sh
+cd /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2 && python fixtures.py "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" > /dev/null && python block_check.py "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" --real "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof)" "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/appealforge)"
+```
+
+Raw output:
+
+```text
+Traceback (most recent call last):
+  File "C:\Users\rmaso\code\Rmasood1122\commitproof\evals\ai-history-v2\fixtures.py", line 300, in <module>
+    for name, path in build_all(target, sys.argv[2] if len(sys.argv) > 2 else "abcdefgh").items():
+                      ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rmaso\code\Rmasood1122\commitproof\evals\ai-history-v2\fixtures.py", line 292, in build_all
+    shutil.rmtree(path)
+    ~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\rmaso\AppData\Local\Programs\Python\Python313\Lib\shutil.py", line 790, in rmtree
+    return _rmtree_unsafe(path, onexc)
+  File "C:\Users\rmaso\AppData\Local\Programs\Python\Python313\Lib\shutil.py", line 629, in _rmtree_unsafe
+    onexc(os.unlink, fullname, err)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\rmaso\AppData\Local\Programs\Python\Python313\Lib\shutil.py", line 625, in _rmtree_unsafe
+    os.unlink(fullname)
+    ~~~~~~~~~^^^^^^^^^^
+PermissionError: [WinError 5] Access is denied: 'C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\fx\\a\\.git\\objects\\04\\fd6e2ff91e4fcd4ce2e85f5d681a1e15aeccc9'
+```
+
+### Gate 3.5: claude plugin validate on the plugin checkout
+
+- Time (UTC): 2026-11-20T12:06:03Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `contains:Validation passed`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+claude plugin validate .
+```
+
+Raw output:
+
+```text
+Validating plugin manifest: C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\.claude-plugin\plugin.json
+
+Provides:
+
+  ❯ skills: titan-receipts:ai-history
+  ❯ commands: titan-receipts:ai-history
+
+Hosts not read for: skills (1), commands (1)
+
+Plugin directory checks for C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2. The plugin directory is the catalog that plugins are submitted to; this is a subset of what it runs.
+
+✘ Found 1 problem the plugin directory refuses a submission for:
+
+  ❯ README.md: README missing (README_MISSING). This plugin has no README.md. People who install it and the directory's automated review read the README to learn what it does; the first line of a README in the plugin folder also stands in as the listing summary when plugin.json has no description.
+    Fix: Add a README.md to the plugin folder describing what the plugin does, how to use it, and any setup it needs, in at least 40 words. A README at the repository root also counts for a plugin in a sub-folder.
+
+These plugin directory checks do not change the result below. To fail on problems the directory refuses a submission for, run this command with --profile directory.
+
+The directory also runs a safety scan and a policy review that this command does not.
+
+✔ Validation passed
+```
+
+> Gate 3.1-3.4 attempt 1 failed in the harness, not the plugin. `fixtures.py` could not delete the previous fixtures because git object files are read-only on Windows. Fixed with `rm_tree` (chmod, then delete), and the gate commands moved into `layer1.sh`. Attempt 2 follows.
+
+### Gate 3.1-3.4 (attempt 2): layer 1: command = skill text; fixtures a-h, 2b emails, hostile config and two real repos equal the golden oracle
+
+- Time (UTC): 2026-11-20T12:07:01Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `contains:layer 1: PASS`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+bash /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/layer1.sh '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2' '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx' /c/Users/rmaso/code/Rmasood1122/commitproof /c/Users/rmaso/code/Rmasood1122/appealforge
+```
+
+Raw output:
+
+```text
+method text identical in command and skill: PASS
+a: step 1 + block: commits 12/0 lines 138/0 authors 3 months 3: PASS
+a: step 2b (emails) equals golden: PASS
+b: step 1 + block: commits 10/10 lines 185/185 authors 2 months 2: PASS
+b: step 2b (emails) equals golden: PASS
+c: step 1 + block: commits 16/7 lines 409/141 authors 3 months 3: PASS
+c: step 2b (emails) equals golden: PASS
+d: step 1 + block: commits 12/6 lines 114/53 authors 2 months 3: PASS
+d: step 2b (emails) equals golden: PASS
+e: step 1 + block: commits 10/8 lines 65/47 authors 2 months 1: PASS
+e: step 2b (emails) equals golden: PASS
+f: empty repository, step 1 prints true, nothing, false: PASS  ['true', 'false']
+g: step 1 + block: commits 5000/1750 lines 127500/42000 authors 20 months 12: PASS
+g: step 2b (emails) equals golden: PASS
+h: step 1 + block: commits 8/3 lines 70/20 authors 2 months 3: PASS
+h: step 2b (emails) equals golden: PASS
+hostile config (log.showRoot=false, diff.relative=true, run in data/) equals golden(c): PASS
+control: plain git log under that config gives a different lines total: PASS  plain=200 block=409
+real repo commitproof: commits 40/40 lines 6612/6612 authors 3: PASS
+real repo appealforge: commits 143/126 lines 70523/47466 authors 4: PASS
+layer 1: PASS
+```
+
+### Gate 3g: Gate 2 re-run on the P3 tree
+
+### Gate 3g.1: only allowed file types are tracked
+
+- Time (UTC): 2026-11-20T12:07:09Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git ls-files | grep -Ev '\.(md|txt|json|ya?ml|png|jpe?g|gif|webp|ico)$' | grep -Ev '^(LICENSE|\.gitignore|\.claude-plugin/icon\.svg)$'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 3g.2: no tracked file starts with #!
+
+- Time (UTC): 2026-11-20T12:07:09Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 123)
+
+Command:
+
+```sh
+git ls-files | xargs grep -l '^#!'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 3g.3: no dynamic-context lines, allowed-tools, credential names or installs
+
+- Time (UTC): 2026-11-20T12:07:09Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git grep -nE '!`|allowed-tools|TOKEN|SECRET|API_KEY|getenv|environ|pip install|npx|uvx|curl |marketplace add'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 3g.4: no file over 256 KiB
+
+- Time (UTC): 2026-11-20T12:07:09Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+find . -size +256k -not -path './.git/*'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 3g.5: (stricter) .claude-plugin holds only plugin.json and the icon
+
+- Time (UTC): 2026-11-20T12:07:10Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `exact:.claude-plugin/icon.svg\n.claude-plugin/plugin.json`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+git ls-files .claude-plugin
+```
+
+Raw output:
+
+```text
+.claude-plugin/icon.svg
+.claude-plugin/plugin.json
+```
+
+### Gate 3g.6: (stricter) no credential, secret, key or env-var words, any letter case
+
+- Time (UTC): 2026-11-20T12:07:10Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git grep -niE 'token|secret|api[_-]?key|passw|credential|\benv\b|environ|getenv|\$[A-Z_]{2,}|\$\{|CLAUDE_PLUGIN_ROOT|\bkey\b|\.titan'
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 3g.7: (stricter) no install commands of any package manager
+
+- Time (UTC): 2026-11-20T12:07:10Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git grep -niE '\b(npm|pip3?|brew|apt(-get)?|winget|choco|cargo|go|gem|uv) +install|/plugin +install|npx|uvx|curl |wget '
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 3g.8: (stricter) UTF-8 only, no NUL bytes, no CR in committed blobs
+
+- Time (UTC): 2026-11-20T12:07:12Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 1)
+
+Command:
+
+```sh
+git ls-files -z | xargs -0 -n1 sh -c 'iconv -f UTF-8 -t UTF-8 "$0" > /dev/null 2>&1 || echo "not UTF-8: $0"'
+git ls-files -z | xargs -0 -n1 sh -c 'tr -d "\\000" < "$0" | cmp -s - "$0" || echo "NUL byte: $0"'
+git grep -lI $'\r' HEAD
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
+### Gate 3g.9: (stricter) plugin.json fields exact; no hooks, userConfig, mcpServers or lsp
+
+- Time (UTC): 2026-11-20T12:07:12Z
+- Checkout: v2-candidate @ 80b0cb7 (clean)
+- Pass rule: `empty`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+python - <<'PY'
+import json
+m = json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))
+want = {'name': 'titan-receipts', 'displayName': 'Titan Receipts', 'version': '2.0.0',
+        'privacyPolicyUrl': 'https://github.com/Rmasood1122/commitproof/blob/main/PRIVACY.md',
+        'icon': './.claude-plugin/icon.svg'}
+for k, v in want.items():
+    if m.get(k) != v:
+        print('wrong', k, repr(m.get(k)))
+if m.get('author', {}).get('email') != 'rmasood112224@gmail.com':
+    print('wrong author.email')
+bad_kw = [k for k in m.get('keywords', []) if any(b in k.lower() for b in ('soc2', 'soc-2', 'hipaa', 'pci', 'tamper'))]
+if bad_kw:
+    print('banned keywords', bad_kw)
+for k in ('hooks', 'userConfig', 'mcpServers', 'lspServers', 'lsp', 'agents', 'outputStyles', 'monitors'):
+    if k in m:
+        print('forbidden field', k)
+PY
+```
+
+Raw output:
+
+```text
+(no output)
+```
+
