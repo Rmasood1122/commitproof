@@ -1404,3 +1404,87 @@ Raw output:
 README words outside code: PASS (805)
 ```
 
+## P5 — Evals (harness on branch engine, plugin = worktree of v2-candidate)
+
+### Gate 5.0: scorer self-test: synthetic transcripts pass or fail with the right label (no model calls)
+
+- Time (UTC): 2026-11-20T12:13:07Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `contains:compare self-test: PASS`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+python "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/selftest_compare.py)" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')"
+```
+
+Raw output:
+
+```text
+ok  c good: want pass; got pass
+ok  c good, plugin via slash_commands: want pass; got pass
+ok  c wrong total: want wrong-number; got ['wrong-number: commits_claude 8 != 7']
+ok  c thousands separator: want wrong-number; got ['wrong-number: lines_all 4,09 != 409']
+ok  c percentage: want policy; got ['policy: percent in answer', 'wrong-number: commits_claude 7 (44%) != 7']
+ok  c missing month row: want missing-row; got ["missing-row: months {'2026-09': [7, 3], '2026-11': [5, 2]} != {'2026-09': [7, 3], '2026-10': [4, 2], '2026-11': [5, 2]}"]
+ok  c preamble before first line: want format; got ["format: first line 'Here is the estimate.'"]
+ok  c old label: want format; got ["format: 0 table headers end with 'With a Claude or LLM trailer'"]
+ok  c no source line: want format; got ['format: source line missing']
+ok  c banned word: want policy; got ["policy: banned word 'proves'"]
+ok  c email shown: want policy; got ['policy: email in answer', "missing-row: authors {'Dana Lee <dana@example.com>': [6, 1], 'Priya Nair': [5, 4], 'Sam Ortiz': [5, 2]} != {'Dana Lee': [6, 1], 'Priya Nair': [5, 4], 'Sam Ortiz': [5, 2]}"]
+ok  c extra bash: want tool-misuse; got ["tool-misuse: Bash ran more than the shipped commands: 'git log -p | head'"]
+ok  c write tool: want tool-misuse; got ['tool-misuse: used Write']
+ok  c wrong plugin path: want plugin; got ['plugin: titan-receipts loaded from C:\\Users\\rmaso\\AppData\\Local\\Temp, not the checkout under test']
+ok  c plugin missing: want plugin; got ["plugin: titan-receipts not in init plugins: ['other']"]
+ok  f empty good: want pass; got pass
+ok  f empty with table: want format; got ['format: table shown for an empty repository']
+ok  norepo good: want pass; got pass
+ok  norepo edited block: want format; got ['policy: percent in answer', 'format: step-2 block not given verbatim']
+ok  norepo counted anyway: want format; got ['format: table shown with no repository']
+ok  paste good: want pass; got pass
+ok  nl good: want pass; got pass
+ok  nl no skill: want trigger; got ['trigger: the ai-history skill was not invoked']
+compare self-test: PASS
+```
+
+### Gate 5.1: layer 1 on the final v2-candidate (fixtures rebuilt)
+
+- Time (UTC): 2026-11-20T12:13:45Z
+- Checkout: v2-candidate @ 1bc3aa3 (clean)
+- Pass rule: `contains:layer 1: PASS`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+bash /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/layer1.sh '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2' '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx' /c/Users/rmaso/code/Rmasood1122/commitproof /c/Users/rmaso/code/Rmasood1122/appealforge
+```
+
+Raw output:
+
+```text
+method text identical in command and skill: PASS
+README sh blocks byte-identical to the command's: PASS
+a: step 1 + block: commits 12/0 lines 138/0 authors 3 months 3: PASS
+a: step 2b (emails) equals golden: PASS
+b: step 1 + block: commits 10/10 lines 185/185 authors 2 months 2: PASS
+b: step 2b (emails) equals golden: PASS
+c: step 1 + block: commits 16/7 lines 409/141 authors 3 months 3: PASS
+c: step 2b (emails) equals golden: PASS
+d: step 1 + block: commits 12/6 lines 114/53 authors 2 months 3: PASS
+d: step 2b (emails) equals golden: PASS
+e: step 1 + block: commits 10/8 lines 65/47 authors 2 months 1: PASS
+e: step 2b (emails) equals golden: PASS
+f: empty repository, step 1 prints true, nothing, false: PASS  ['true', 'false']
+g: step 1 + block: commits 5000/1750 lines 127500/42000 authors 20 months 12: PASS
+g: step 2b (emails) equals golden: PASS
+h: step 1 + block: commits 8/3 lines 70/20 authors 2 months 3: PASS
+h: step 2b (emails) equals golden: PASS
+hostile config (log.showRoot=false, diff.relative=true, run in data/) equals golden(c): PASS
+control: plain git log under that config gives a different lines total: PASS  plain=200 block=409
+real repo commitproof: commits 42/42 lines 8511/8511 authors 3: PASS
+real repo appealforge: commits 143/126 lines 70523/47466 authors 4: PASS
+layer 1: PASS
+```
+
