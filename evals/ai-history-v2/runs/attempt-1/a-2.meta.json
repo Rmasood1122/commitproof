@@ -1,0 +1,67 @@
+{
+  "tag": "a-2",
+  "case": "fixtures",
+  "fixture": "a",
+  "prompt": "/titan-receipts:ai-history",
+  "exit": 0,
+  "seconds": 16.8,
+  "workdir": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\runs\\work\\a-2",
+  "plugin": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+  "state_before": {
+    "status": "",
+    "refs": "refs/heads/main 507fa1e3112c741552ddc313c168bf5c7743237e\n507fa1e3112c741552ddc313c168bf5c7743237e\n",
+    "config_sha256": "8ece11d121c749221b450b07559327681b8cd43de5bcf45c560b82736b014642",
+    "files": [
+      "CHANGES.md",
+      "README.md",
+      "cli.py",
+      "config.py",
+      "logo.bin",
+      "parser.py",
+      "test_parser.py"
+    ]
+  },
+  "state_after": {
+    "status": "",
+    "refs": "refs/heads/main 507fa1e3112c741552ddc313c168bf5c7743237e\n507fa1e3112c741552ddc313c168bf5c7743237e\n",
+    "config_sha256": "8ece11d121c749221b450b07559327681b8cd43de5bcf45c560b82736b014642",
+    "files": [
+      "CHANGES.md",
+      "README.md",
+      "cli.py",
+      "config.py",
+      "logo.bin",
+      "parser.py",
+      "test_parser.py"
+    ]
+  },
+  "argv": [
+    "-p",
+    "/titan-receipts:ai-history",
+    "--plugin-dir",
+    "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-turns",
+    "10",
+    "--max-budget-usd",
+    "1",
+    "--strict-mcp-config",
+    "--no-session-persistence",
+    "--allowedTools",
+    "Bash",
+    "Read",
+    "Glob",
+    "Grep",
+    "Skill",
+    "--disallowedTools",
+    "Write",
+    "Edit",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+    "Agent",
+    "PowerShell"
+  ]
+}
