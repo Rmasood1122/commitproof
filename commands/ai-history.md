@@ -49,7 +49,7 @@ echo "== authors_claude"; git shortlog -s -n -e --no-merges -i -E --grep='^((co-
 
 ## Step 3: answer in this layout
 
-Write the answer as Markdown, not inside a code block. Fill each angle bracket from the step 2 output:
+Write the answer as Markdown, not inside a code block. Copy every line of the layout word for word, as plain text: no bold, no headings, no added or reworded lines. Change only the angle brackets, filled from the step 2 output:
 - Add one author row for each line under `authors_all (top 15)`, in that order. Take the second column from the same name under `authors_claude`, or `0` if the name is not there.
 - Add one month row for each line under `months_all (last 12)`, oldest first. Take the second column from `months_claude`, or `0`.
 - Copy numbers with no separators.
