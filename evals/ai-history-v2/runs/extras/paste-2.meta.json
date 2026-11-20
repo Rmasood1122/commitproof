@@ -1,0 +1,51 @@
+{
+  "tag": "paste-2",
+  "case": "paste",
+  "fixture": "c",
+  "prompt": "I can't open my repository here, so I ran the ai-history commands from the Titan Receipts plugin in a terminal inside it. Here is the output:\n\n```\ncommits_all 16\ncommits_claude 7\nlines_all 409\nlines_claude 141\nauthors_all 3\n== authors_all (top 15)\n     6\tDana Lee\n     5\tPriya Nair\n     5\tSam Ortiz\n== authors_claude\n     4\tPriya Nair\n     2\tSam Ortiz\n     1\tDana Lee\n== months_all (last 12)\n      7 2026-09\n      4 2026-10\n      5 2026-11\n== months_claude (last 12)\n      3 2026-09\n      2 2026-10\n      2 2026-11\n```",
+  "exit": 0,
+  "seconds": 13.6,
+  "workdir": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\runs-x\\work\\paste-2",
+  "plugin": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+  "state_before": {
+    "status": "",
+    "refs": "",
+    "config_sha256": null,
+    "files": []
+  },
+  "state_after": {
+    "status": "",
+    "refs": "",
+    "config_sha256": null,
+    "files": []
+  },
+  "argv": [
+    "-p",
+    "I can't open my repository here, so I ran the ai-history commands from the Titan Receipts plugin in a terminal inside it. Here is the output:\n\n```\ncommits_all 16\ncommits_claude 7\nlines_all 409\nlines_claude 141\nauthors_all 3\n== authors_all (top 15)\n     6\tDana Lee\n     5\tPriya Nair\n     5\tSam Ortiz\n== authors_claude\n     4\tPriya Nair\n     2\tSam Ortiz\n     1\tDana Lee\n== months_all (last 12)\n      7 2026-09\n      4 2026-10\n      5 2026-11\n== months_claude (last 12)\n      3 2026-09\n      2 2026-10\n      2 2026-11\n```",
+    "--plugin-dir",
+    "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-turns",
+    "10",
+    "--max-budget-usd",
+    "1",
+    "--strict-mcp-config",
+    "--no-session-persistence",
+    "--allowedTools",
+    "Bash",
+    "Read",
+    "Glob",
+    "Grep",
+    "Skill",
+    "--disallowedTools",
+    "Write",
+    "Edit",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+    "Agent",
+    "PowerShell"
+  ]
+}

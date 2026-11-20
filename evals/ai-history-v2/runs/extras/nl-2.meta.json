@@ -1,0 +1,73 @@
+{
+  "tag": "nl-2",
+  "case": "nl",
+  "fixture": "c",
+  "prompt": "How much of this repo did Claude help write?",
+  "exit": 0,
+  "seconds": 19.6,
+  "workdir": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\runs-x\\work\\nl-2",
+  "plugin": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+  "state_before": {
+    "status": "",
+    "refs": "refs/heads/feat-a 2270c5d65ce52a548090440ac747c81a19e1f357\nrefs/heads/feat-b e2c1de6d3d3cea8419dda1917e1e9ffaa89e3f41\nrefs/heads/main 5172ec41eaa2a53cd93d2fec1f1a9cb50c1ac87e\n5172ec41eaa2a53cd93d2fec1f1a9cb50c1ac87e\n",
+    "config_sha256": "8ece11d121c749221b450b07559327681b8cd43de5bcf45c560b82736b014642",
+    "files": [
+      "README.md",
+      "a.py",
+      "a_doc.md",
+      "app.py",
+      "b.py",
+      "c.py",
+      "d.py",
+      "data",
+      "data\\large.txt",
+      "e.py"
+    ]
+  },
+  "state_after": {
+    "status": "",
+    "refs": "refs/heads/feat-a 2270c5d65ce52a548090440ac747c81a19e1f357\nrefs/heads/feat-b e2c1de6d3d3cea8419dda1917e1e9ffaa89e3f41\nrefs/heads/main 5172ec41eaa2a53cd93d2fec1f1a9cb50c1ac87e\n5172ec41eaa2a53cd93d2fec1f1a9cb50c1ac87e\n",
+    "config_sha256": "8ece11d121c749221b450b07559327681b8cd43de5bcf45c560b82736b014642",
+    "files": [
+      "README.md",
+      "a.py",
+      "a_doc.md",
+      "app.py",
+      "b.py",
+      "c.py",
+      "d.py",
+      "data",
+      "data\\large.txt",
+      "e.py"
+    ]
+  },
+  "argv": [
+    "-p",
+    "How much of this repo did Claude help write?",
+    "--plugin-dir",
+    "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-turns",
+    "10",
+    "--max-budget-usd",
+    "1",
+    "--strict-mcp-config",
+    "--no-session-persistence",
+    "--allowedTools",
+    "Bash",
+    "Read",
+    "Glob",
+    "Grep",
+    "Skill",
+    "--disallowedTools",
+    "Write",
+    "Edit",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+    "Agent",
+    "PowerShell"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "tag": "h-3",
+  "case": "fixtures",
+  "fixture": "h",
+  "prompt": "/titan-receipts:ai-history",
+  "exit": 0,
+  "seconds": 16.4,
+  "workdir": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\runs2\\work\\h-3",
+  "plugin": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+  "state_before": {
+    "status": "",
+    "refs": "refs/heads/feat-r 37fdff2cf6d6090c037f7f3a084a3153cb4748e0\nrefs/heads/feat-s1 345021c1bd32e62b9c4342e24d8ffb20ed884b59\nrefs/heads/feat-s2 b563046a3a2d7d3c0ff0805308a912bde1a9d0bb\nrefs/heads/main 679f301e3520d7c3b1497316d8a1f2f7f228c468\nrefs/heads/side 3abf2fb421b208bccb615bc1a5729376ddd54366\n679f301e3520d7c3b1497316d8a1f2f7f228c468\n",
+    "config_sha256": "8ece11d121c749221b450b07559327681b8cd43de5bcf45c560b82736b014642",
+    "files": [
+      "base.py",
+      "hotfix.py",
+      "main.py",
+      "r.py",
+      "s1.py",
+      "s2.py",
+      "typo.py"
+    ]
+  },
+  "state_after": {
+    "status": "",
+    "refs": "refs/heads/feat-r 37fdff2cf6d6090c037f7f3a084a3153cb4748e0\nrefs/heads/feat-s1 345021c1bd32e62b9c4342e24d8ffb20ed884b59\nrefs/heads/feat-s2 b563046a3a2d7d3c0ff0805308a912bde1a9d0bb\nrefs/heads/main 679f301e3520d7c3b1497316d8a1f2f7f228c468\nrefs/heads/side 3abf2fb421b208bccb615bc1a5729376ddd54366\n679f301e3520d7c3b1497316d8a1f2f7f228c468\n",
+    "config_sha256": "8ece11d121c749221b450b07559327681b8cd43de5bcf45c560b82736b014642",
+    "files": [
+      "base.py",
+      "hotfix.py",
+      "main.py",
+      "r.py",
+      "s1.py",
+      "s2.py",
+      "typo.py"
+    ]
+  },
+  "argv": [
+    "-p",
+    "/titan-receipts:ai-history",
+    "--plugin-dir",
+    "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-turns",
+    "10",
+    "--max-budget-usd",
+    "1",
+    "--strict-mcp-config",
+    "--no-session-persistence",
+    "--allowedTools",
+    "Bash",
+    "Read",
+    "Glob",
+    "Grep",
+    "Skill",
+    "--disallowedTools",
+    "Write",
+    "Edit",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+    "Agent",
+    "PowerShell"
+  ]
+}

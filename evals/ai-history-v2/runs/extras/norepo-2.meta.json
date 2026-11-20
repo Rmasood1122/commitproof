@@ -1,0 +1,51 @@
+{
+  "tag": "norepo-2",
+  "case": "norepo",
+  "fixture": null,
+  "prompt": "/titan-receipts:ai-history",
+  "exit": 0,
+  "seconds": 12.1,
+  "workdir": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\runs-x\\work\\norepo-2",
+  "plugin": "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+  "state_before": {
+    "status": "",
+    "refs": "",
+    "config_sha256": null,
+    "files": []
+  },
+  "state_after": {
+    "status": "",
+    "refs": "",
+    "config_sha256": null,
+    "files": []
+  },
+  "argv": [
+    "-p",
+    "/titan-receipts:ai-history",
+    "--plugin-dir",
+    "C:\\Users\\rmaso\\AppData\\Local\\Temp\\claude\\74486e4faaf2f9ee\\deb1bc2b-013f-4645-9174-a879297d0526\\scratchpad\\wt-v2",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--max-turns",
+    "10",
+    "--max-budget-usd",
+    "1",
+    "--strict-mcp-config",
+    "--no-session-persistence",
+    "--allowedTools",
+    "Bash",
+    "Read",
+    "Glob",
+    "Grep",
+    "Skill",
+    "--disallowedTools",
+    "Write",
+    "Edit",
+    "NotebookEdit",
+    "WebFetch",
+    "WebSearch",
+    "Agent",
+    "PowerShell"
+  ]
+}

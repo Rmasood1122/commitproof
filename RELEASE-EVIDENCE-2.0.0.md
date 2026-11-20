@@ -2001,3 +2001,195 @@ The directory also runs a safety scan and a policy review that this command does
 ✔ Validation passed
 ```
 
+### Gate 5.3 (attempt 2): layer 2: 24 model runs (8 fixtures x 3), every number compared by code; gate 24/24
+
+- Time (UTC): 2026-11-20T12:33:52Z
+- Checkout: v2-candidate @ 62c7ae2 (clean)
+- Pass rule: `contains:exact runs: 24/24;`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+python "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/run_claude.py)" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/runs2')" && python "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/compare.py)" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/runs2')"
+```
+
+Raw output:
+
+```text
+a-1: exit 0 in 17.0s
+a-2: exit 0 in 17.5s
+a-3: exit 0 in 16.7s
+b-1: exit 0 in 16.9s
+b-2: exit 0 in 17.7s
+b-3: exit 0 in 18.7s
+c-1: exit 0 in 18.4s
+c-2: exit 0 in 18.2s
+c-3: exit 0 in 22.5s
+d-1: exit 0 in 21.1s
+d-2: exit 0 in 20.5s
+d-3: exit 0 in 17.5s
+e-1: exit 0 in 17.2s
+e-2: exit 0 in 16.4s
+e-3: exit 0 in 16.4s
+f-1: exit 0 in 7.0s
+f-2: exit 0 in 6.6s
+f-3: exit 0 in 6.9s
+g-1: exit 0 in 19.9s
+g-2: exit 0 in 20.6s
+g-3: exit 0 in 19.5s
+h-1: exit 0 in 16.7s
+h-2: exit 0 in 16.5s
+h-3: exit 0 in 16.4s
+| run | result | cost USD | output tokens | errors |
+|---|---|---|---|---|
+| a-1 | PASS | 0.1348 | 1634 |  |
+| a-2 | PASS | 0.1347 | 1632 |  |
+| a-3 | PASS | 0.1347 | 1633 |  |
+| b-1 | PASS | 0.1345 | 1607 |  |
+| b-2 | PASS | 0.1343 | 1602 |  |
+| b-3 | PASS | 0.1342 | 1598 |  |
+| c-1 | PASS | 0.1345 | 1607 |  |
+| c-2 | PASS | 0.1351 | 1629 |  |
+| c-3 | PASS | 0.1355 | 1642 |  |
+| d-1 | PASS | 0.1348 | 1617 |  |
+| d-2 | PASS | 0.1347 | 1615 |  |
+| d-3 | PASS | 0.134 | 1593 |  |
+| e-1 | PASS | 0.1337 | 1580 |  |
+| e-2 | PASS | 0.1332 | 1561 |  |
+| e-3 | PASS | 0.1338 | 1582 |  |
+| f-1 | PASS | 0.0923 | 273 |  |
+| f-2 | PASS | 0.0912 | 224 |  |
+| f-3 | PASS | 0.092 | 263 |  |
+| g-1 | PASS | 0.1462 | 2001 |  |
+| g-2 | PASS | 0.1462 | 2001 |  |
+| g-3 | PASS | 0.1457 | 1985 |  |
+| h-1 | PASS | 0.1346 | 1619 |  |
+| h-2 | PASS | 0.1346 | 1618 |  |
+| h-3 | PASS | 0.1345 | 1614 |  |
+
+exact runs: 24/24; Wilson 95% interval [0.862, 1.000]
+models: ['claude-opus-5-5']; tokens {'input': 138, 'cache_read': 1214020, 'cache_write': 271990, 'output': 35730}; total cost USD 3.1339
+```
+
+### Gate 5.4: extras: no repository (3), pasted output (3), plain question triggers the skill (3); scored by code
+
+- Time (UTC): 2026-11-20T12:36:39Z
+- Checkout: v2-candidate @ 62c7ae2 (clean)
+- Pass rule: `contains:exact runs: 9/9;`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+python "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/run_claude.py)" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/runs-x')" --mode norepo && python "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/run_claude.py)" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/runs-x')" --mode paste && python "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/run_claude.py)" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/runs-x')" --mode nl && python "$(cygpath -w /c/Users/rmaso/code/Rmasood1122/commitproof/evals/ai-history-v2/compare.py)" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/wt-v2')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/fx')" "$(cygpath -w '/c/Users/rmaso/AppData/Local/Temp/claude/74486e4faaf2f9ee/deb1bc2b-013f-4645-9174-a879297d0526/scratchpad/runs-x')"
+```
+
+Raw output:
+
+```text
+norepo-1: exit 0 in 12.5s
+norepo-2: exit 0 in 12.1s
+norepo-3: exit 0 in 12.5s
+paste-1: exit 0 in 13.2s
+paste-2: exit 0 in 13.6s
+paste-3: exit 0 in 13.5s
+nl-1: exit 0 in 19.2s
+nl-2: exit 0 in 19.6s
+nl-3: exit 0 in 20.4s
+| run | result | cost USD | output tokens | errors |
+|---|---|---|---|---|
+| nl-1 | PASS | 0.141 | 1693 |  |
+| nl-2 | PASS | 0.1412 | 1699 |  |
+| nl-3 | PASS | 0.1412 | 1698 |  |
+| norepo-1 | PASS | 0.1108 | 1235 |  |
+| norepo-2 | PASS | 0.1104 | 1222 |  |
+| norepo-3 | PASS | 0.1103 | 1218 |  |
+| paste-1 | PASS | 0.1082 | 1053 |  |
+| paste-2 | PASS | 0.1104 | 1164 |  |
+| paste-3 | PASS | 0.1105 | 1151 |  |
+
+exact runs: 9/9; Wilson 95% interval [0.701, 1.000]
+models: ['claude-opus-5-5']; tokens {'input': 48, 'cache_read': 399241, 'cache_write': 95154, 'output': 12133}; total cost USD 1.0839
+```
+
+### Gate 5.5: claude plugin validate on the final v2-candidate
+
+- Time (UTC): 2026-11-20T12:36:58Z
+- Checkout: v2-candidate @ 62c7ae2 (clean)
+- Pass rule: `contains:Validation passed`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+claude plugin validate .
+```
+
+Raw output:
+
+```text
+Validating plugin manifest: C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\.claude-plugin\plugin.json
+
+Provides:
+
+  ❯ skills: titan-receipts:ai-history
+  ❯ commands: titan-receipts:ai-history
+
+Hosts not read for: skills (1), commands (1)
+
+Plugin directory checks for C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2. The plugin directory is the catalog that plugins are submitted to; this is a subset of what it runs.
+
+✔ These checks found nothing to report
+
+The directory also runs a safety scan and a policy review that this command does not.
+
+ℹ Advice (does not change the verdict):
+
+  ❯ C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\README.md: This README has no line that installs "titan-receipts" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. Validate the folder that holds its marketplace.json to have <owner>/<repo> filled in, and the name its marketplace lists it under.
+      /plugin install titan-receipts --marketplace <owner>/<repo>
+
+✔ Validation passed
+```
+
+### Gate 5.6: claude plugin validate --strict --profile directory on the final v2-candidate
+
+- Time (UTC): 2026-11-20T12:36:59Z
+- Checkout: v2-candidate @ 62c7ae2 (clean)
+- Pass rule: `exit0`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+claude plugin validate . --strict --profile directory
+```
+
+Raw output:
+
+```text
+Validating plugin manifest: C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\.claude-plugin\plugin.json
+
+Provides:
+
+  ❯ skills: titan-receipts:ai-history
+  ❯ commands: titan-receipts:ai-history
+
+Hosts not read for: skills (1), commands (1)
+
+Plugin directory checks for C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2. The plugin directory is the catalog that plugins are submitted to; this is a subset of what it runs.
+
+✔ These checks found nothing to report
+
+The directory also runs a safety scan and a policy review that this command does not.
+
+ℹ Advice (does not change the verdict):
+
+  ❯ C:\Users\rmaso\AppData\Local\Temp\claude\74486e4faaf2f9ee\deb1bc2b-013f-4645-9174-a879297d0526\scratchpad\wt-v2\README.md: This README has no line that installs "titan-receipts" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. Validate the folder that holds its marketplace.json to have <owner>/<repo> filled in, and the name its marketplace lists it under.
+      /plugin install titan-receipts --marketplace <owner>/<repo>
+
+✔ Validation passed
+```
+
+> P5 summary. Probe 1/1 ($0.14). Gate 5.3 attempt 1: 20/24 ($3.13), format only. Attempt 2 after the step-3 fix: **24/24, Wilson 95% [0.862, 1.000]** ($3.13). Not gated: all 8 fixed layout lines appear verbatim in 21/21 non-empty answers. Gate 5.4 extras: **9/9** ($1.08). The plain question triggered the skill in 3/3 runs; the no-repo reply was exact in 3/3; pasted output was answered from the paste in 3/3. Gates 5.5 and 5.6 (validate, default and strict directory profile): PASS. Model claude-opus-5-5. Total model spend: $7.48. Transcripts are in `evals/ai-history-v2/runs/`.
+
