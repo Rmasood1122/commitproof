@@ -2193,3 +2193,51 @@ The directory also runs a safety scan and a policy review that this command does
 
 > P5 summary. Probe 1/1 ($0.14). Gate 5.3 attempt 1: 20/24 ($3.13), format only. Attempt 2 after the step-3 fix: **24/24, Wilson 95% [0.862, 1.000]** ($3.13). Not gated: all 8 fixed layout lines appear verbatim in 21/21 non-empty answers. Gate 5.4 extras: **9/9** ($1.08). The plain question triggered the skill in 3/3 runs; the no-repo reply was exact in 3/3; pasted output was answered from the paste in 3/3. Gates 5.5 and 5.6 (validate, default and strict directory profile): PASS. Model claude-opus-5-5. Total model spend: $7.48. Transcripts are in `evals/ai-history-v2/runs/`.
 
+## P6 — Hand-off
+
+### Gate 6.1: main untouched, nothing pushed (local view of origin), final refs
+
+- Time (UTC): 2026-11-20T12:37:42Z
+- Checkout: engine @ 2e8feb2 (1 uncommitted change(s))
+- Pass rule: `contains:main untouched; engine and v2-candidate not on origin`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+M=56c563fd6618c5e429657d52b55364627da96908
+test "$(git rev-parse main)" = $M && test "$(git rev-parse origin/main)" = $M && ! git for-each-ref refs/remotes/origin | grep -qE 'origin/(engine|v2-candidate)$' && echo 'main untouched; engine and v2-candidate not on origin (local view)'
+git log --oneline main..v2-candidate
+echo "v1.3.3-final -> $(git rev-parse --short 'v1.3.3-final^{commit}')"
+```
+
+Raw output:
+
+```text
+main untouched; engine and v2-candidate not on origin (local view)
+62c7ae2 P5 fix: step 3 says to copy the layout word for word, as plain text
+1bc3aa3 P4: 2.0.0 README, PRIVACY and CHANGELOG (Gate 4)
+80b0cb7 P3: /ai-history command and ai-history skill, git-only counting (Gate 3)
+da7f79c P2: strip to Markdown-only for 2.0.0; plugin.json keeps name titan-receipts (Gate 2)
+v1.3.3-final -> 56c563f
+```
+
+### Gate 6.2: git diff --stat main v2-candidate
+
+- Time (UTC): 2026-11-20T12:37:42Z
+- Checkout: engine @ 2e8feb2 (1 uncommitted change(s))
+- Pass rule: `exit0`
+- Result: **PASS** (exit 0)
+
+Command:
+
+```sh
+git diff --stat main v2-candidate | tail -1
+```
+
+Raw output:
+
+```text
+ 40 files changed, 365 insertions(+), 4606 deletions(-)
+```
+
